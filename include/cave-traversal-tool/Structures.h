@@ -33,6 +33,12 @@ struct Point
     glm::vec3 position = {};
 };
 
+struct PointIntensity
+{
+    glm::vec3 position  = {};
+    float     intensity = {};
+};
+
 struct NormalPoint
 {
     glm::vec3 position = {};

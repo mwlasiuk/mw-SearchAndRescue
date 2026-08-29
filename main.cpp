@@ -61,9 +61,6 @@ static std::vector<uint32_t>   g_stretcher_indices{};
 static std::vector<Point>                          g_trajectory_positions{};
 static std::vector<TrajectoryPoseOrientationMat33> g_trajectory_orientations_mat33{};
 
-static std::vector<Point>                          g_optimized_trajectory_positions{};
-static std::vector<TrajectoryPoseOrientationMat33> g_optimized_trajectory_orientations_mat33{};
-
 static float g_cpu_time_draw_trajectory_ms        = 0.0f;
 static float g_cpu_time_draw_stretcher_ms         = 0.0f;
 static float g_cpu_time_draw_cave_buckets_ms      = 0.0f;
@@ -81,17 +78,15 @@ static bool g_use_fine_picking = false;
 
 static float g_cave_proximity_search = 3.0f;
 
-static bool g_draw_origin               = true;
-static bool g_draw_camera_target        = true;
-static bool g_draw_trajectory           = true;
-static bool g_draw_optimized_trajectory = true;
-static bool g_draw_stretcher            = true;
-static bool g_draw_stretcher_bbox       = true;
-static bool g_draw_point_cloud          = true;
-static bool g_draw_bounding_box         = true;
+static bool g_draw_origin         = true;
+static bool g_draw_camera_target  = true;
+static bool g_draw_trajectory     = true;
+static bool g_draw_stretcher      = true;
+static bool g_draw_stretcher_bbox = true;
+static bool g_draw_point_cloud    = true;
+static bool g_draw_bounding_box   = true;
 
-static bool      g_enable_inactive_state = false;
-static glm::vec3 g_clear_color           = {0.2f, 0.2f, 0.2f};
+static glm::vec3 g_clear_color = {0.2f, 0.2f, 0.2f};
 
 static float g_origin_scale = 1.0f;
 static float g_origin_width = 1.0f;
@@ -102,9 +97,6 @@ static glm::vec3 g_target_color = {1.0f, 1.0f, 1.0f};
 
 static float     g_trajectory_width = 1.0f;
 static glm::vec3 g_trajectory_color = {1.0f, 1.0f, 1.0f};
-
-static float     g_optimized_trajectory_width = 2.0f;
-static glm::vec3 g_optimized_trajectory_color = {1.0f, 0.0f, 1.0f};
 
 static glm::vec3 g_stretcher_box_color = {0.0f, 1.0f, 1.0f};
 static float     g_stretcher_box_width = 1.0f;
@@ -130,9 +122,6 @@ static uint32_t g_stretcher_vao          = UINT32_MAX;
 static uint32_t g_trajectory_positions_vbo = UINT32_MAX;
 static uint32_t g_trajectory_positions_vao = UINT32_MAX;
 
-static uint32_t g_optimized_trajectory_positions_vbo = UINT32_MAX;
-static uint32_t g_optimized_trajectory_positions_vao = UINT32_MAX;
-
 //
 static bool     g_trajectory_index_auto_play           = false;
 static int32_t  g_trajectory_index_auto_play_increment = 1;
@@ -153,18 +142,6 @@ static void rebuild_trajectory_mat33_opengl_data()
 
     g_trajectory_index = 0;
 
-    if (g_optimized_trajectory_positions_vao != UINT32_MAX)
-    {
-        spdlog::debug("Deleting old optimized trajectory positions VAO : {}", g_optimized_trajectory_positions_vao);
-        glDeleteVertexArrays(1, &g_optimized_trajectory_positions_vao);
-    }
-
-    if (g_optimized_trajectory_positions_vbo != UINT32_MAX)
-    {
-        spdlog::debug("Deleting old optimized trajectory positions VBO : {}", g_optimized_trajectory_positions_vbo);
-        glDeleteBuffers(1, &g_optimized_trajectory_positions_vbo);
-    }
-
     if (g_trajectory_positions_vao != UINT32_MAX)
     {
         spdlog::debug("Deleting old trajectory positions VAO : {}", g_trajectory_positions_vao);
@@ -179,9 +156,6 @@ static void rebuild_trajectory_mat33_opengl_data()
 
     g_trajectory_positions_vbo = opengl_buffer_create_buffer(std_vector_size(g_trajectory_positions), GL_DYNAMIC_STORAGE_BIT, g_trajectory_positions.data());
     g_trajectory_positions_vao = opengl_vertex_array_create_vertex_array(g_trajectory_positions_vbo, true, UINT32_MAX, false, layout_point);
-
-    g_optimized_trajectory_positions_vbo = opengl_buffer_create_buffer(std_vector_size(g_trajectory_positions), GL_DYNAMIC_STORAGE_BIT, nullptr);
-    g_optimized_trajectory_positions_vao = opengl_vertex_array_create_vertex_array(g_optimized_trajectory_positions_vbo, true, UINT32_MAX, false, layout_point);
 
     spdlog::debug("Created VAO [{}] and VBO [{}]", g_trajectory_positions_vao, g_trajectory_positions_vbo);
 }
@@ -762,18 +736,6 @@ int main()
     {
         glfwPollEvents();
 
-        if (g_enable_inactive_state && (!glfwGetWindowAttrib(window, GLFW_FOCUSED) || glfwGetWindowAttrib(window, GLFW_ICONIFIED)))
-        {
-            glfwSetWindowTitle(window, "cave-traversal-tool-application [INACTIVE]");
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(33));
-            continue;
-        }
-        else
-        {
-            glfwSetWindowTitle(window, "cave-traversal-tool-application [ACTIVE]");
-        }
-
         int32_t width  = 0;
         int32_t height = 0;
         glfwGetWindowSize(window, &width, &height);
@@ -803,11 +765,10 @@ int main()
         const float point_size_min = point_size_range[0];
         const float point_size_max = point_size_range[1];
 
-        const bool can_draw_trajectory           = g_trajectory_positions.size() && g_trajectory_orientations_mat33.size();
-        const bool can_draw_optimized_trajectory = g_optimized_trajectory_positions.size() && g_optimized_trajectory_orientations_mat33.size();
-        const bool can_draw_stretcher            = g_stretcher_vertices.size() && g_stretcher_indices.size();
-        const bool can_draw_cave                 = g_buckets.size();
-        const bool can_draw_bounding_boxes       = g_buckets.size();
+        const bool can_draw_trajectory     = g_trajectory_positions.size() && g_trajectory_orientations_mat33.size();
+        const bool can_draw_stretcher      = g_stretcher_vertices.size() && g_stretcher_indices.size();
+        const bool can_draw_cave           = g_buckets.size();
+        const bool can_draw_bounding_boxes = g_buckets.size();
 
         std::array<glm::vec4, 6> frustum{};
         compute_camera_frustum_planes(view, projection, frustum);
@@ -1010,7 +971,6 @@ int main()
                 ImGui::Checkbox("g_draw_origin", &g_draw_origin);
                 ImGui::Checkbox("g_draw_camera_target", &g_draw_camera_target);
                 ImGui::Checkbox("g_draw_trajectory", &g_draw_trajectory);
-                ImGui::Checkbox("g_draw_optimized_trajectory", &g_draw_optimized_trajectory);
                 ImGui::Checkbox("g_draw_stretcher", &g_draw_stretcher);
                 ImGui::Checkbox("g_draw_stretcher_bbox", &g_draw_stretcher_bbox);
                 ImGui::Checkbox("g_draw_point_cloud", &g_draw_point_cloud);
@@ -1027,7 +987,6 @@ int main()
                 ImGui::Text("OpenGL renderer     : %s", (const char*)glGetString(GL_RENDERER));
                 ImGui::Text("OpenGL GLSL version : %s", (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
 
-                ImGui::Checkbox("g_enable_inactive_state", &g_enable_inactive_state);
                 ImGui::ColorEdit3("g_clear_color", glm::value_ptr(g_clear_color));
                 ImGui::TreePop();
             }
@@ -1046,10 +1005,6 @@ int main()
                 ImGui::Separator();
                 ImGui::DragFloat("g_trajectory_width", &g_trajectory_width, 1.0f, line_width_min, line_width_max);
                 ImGui::ColorEdit3("g_trajectory_color", glm::value_ptr(g_trajectory_color));
-
-                ImGui::Separator();
-                ImGui::DragFloat("g_optimized_trajectory_width", &g_optimized_trajectory_width, 1.0f, line_width_min, line_width_max);
-                ImGui::ColorEdit3("g_optimized_trajectory_color", glm::value_ptr(g_optimized_trajectory_color));
 
                 ImGui::Separator();
                 ImGui::ColorEdit3("g_stretcher_box_color", glm::value_ptr(g_stretcher_box_color));
@@ -1390,18 +1345,6 @@ int main()
             auto end = std::chrono::high_resolution_clock::now();
 
             g_cpu_time_draw_trajectory_ms = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() / 1'000'000.0f;
-        }
-
-        // OPTIMIZED TRAJECTORY
-        if (g_draw_optimized_trajectory && can_draw_optimized_trajectory)
-        {
-            glLineWidth(g_optimized_trajectory_width);
-            trajectory_program->Bind();
-            trajectory_program->PushUniform16F32("u_MVP", MVP);
-            trajectory_program->PushUniform3F32("u_Color", g_optimized_trajectory_color);
-            glBindVertexArray(g_optimized_trajectory_positions_vao);
-            glDrawArrays(GL_LINE_STRIP, 0, g_optimized_trajectory_positions.size());
-            glLineWidth(1.0f);
         }
 
         //  STRETCHER
