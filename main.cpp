@@ -23,7 +23,7 @@
 #include <cave-traversal-tool/OpenGL/Buffer.h>
 #include <cave-traversal-tool/OpenGL/Program.h>
 #include <cave-traversal-tool/OpenGL/VertexArray.h>
-  
+
 #include <cave-traversal-tool/Processing.h>
 
 #include <glm/glm.hpp>
@@ -673,33 +673,75 @@ int main()
     glEnable(GL_PROGRAM_POINT_SIZE);
     glEnable(GL_DEPTH_TEST);
 
-    uint32_t origin_vertex_shader_id   = opengl_program_compile_shader(origin_vertex_shader_source, GL_VERTEX_SHADER);
-    uint32_t origin_fragment_shader_id = opengl_program_compile_shader(origin_fragment_shader_source, GL_FRAGMENT_SHADER);
-    uint32_t origin_program            = opengl_program_create_program(origin_vertex_shader_id, origin_fragment_shader_id);
+    Program* origin_program = new Program(
+        {ShaderDescriptor{
+             .shader_type = GL_VERTEX_SHADER,
+             .source_size = (int32_t)origin_vertex_shader_source.size(),
+             .source      = origin_vertex_shader_source.data()},
+         ShaderDescriptor{
+             .shader_type = GL_FRAGMENT_SHADER,
+             .source_size = (int32_t)origin_fragment_shader_source.size(),
+             .source      = origin_fragment_shader_source.data()}});
 
-    uint32_t camera_target_vertex_shader_id   = opengl_program_compile_shader(camera_target_vertex_shader_source, GL_VERTEX_SHADER);
-    uint32_t camera_target_fragment_shader_id = opengl_program_compile_shader(camera_target_fragment_shader_source, GL_FRAGMENT_SHADER);
-    uint32_t camera_target_program            = opengl_program_create_program(camera_target_vertex_shader_id, camera_target_fragment_shader_id);
+    Program* camera_target_program = new Program(
+        {ShaderDescriptor{
+             .shader_type = GL_VERTEX_SHADER,
+             .source_size = (int32_t)camera_target_vertex_shader_source.size(),
+             .source      = camera_target_vertex_shader_source.data()},
+         ShaderDescriptor{
+             .shader_type = GL_FRAGMENT_SHADER,
+             .source_size = (int32_t)camera_target_fragment_shader_source.size(),
+             .source      = camera_target_fragment_shader_source.data()}});
 
-    uint32_t point_cloud_vertex_shader_id   = opengl_program_compile_shader(point_cloud_vertex_shader_source, GL_VERTEX_SHADER);
-    uint32_t point_cloud_fragment_shader_id = opengl_program_compile_shader(point_cloud_fragment_shader_source, GL_FRAGMENT_SHADER);
-    uint32_t point_cloud_program            = opengl_program_create_program(point_cloud_vertex_shader_id, point_cloud_fragment_shader_id);
+    Program* point_cloud_program = new Program(
+        {ShaderDescriptor{
+             .shader_type = GL_VERTEX_SHADER,
+             .source_size = (int32_t)point_cloud_vertex_shader_source.size(),
+             .source      = point_cloud_vertex_shader_source.data()},
+         ShaderDescriptor{
+             .shader_type = GL_FRAGMENT_SHADER,
+             .source_size = (int32_t)point_cloud_fragment_shader_source.size(),
+             .source      = point_cloud_fragment_shader_source.data()}});
 
-    uint32_t trajectory_vertex_shader_id   = opengl_program_compile_shader(trajectory_vertex_shader_source, GL_VERTEX_SHADER);
-    uint32_t trajectory_fragment_shader_id = opengl_program_compile_shader(trajectory_fragment_shader_source, GL_FRAGMENT_SHADER);
-    uint32_t trajectory_program            = opengl_program_create_program(trajectory_vertex_shader_id, trajectory_fragment_shader_id);
+    Program* trajectory_program = new Program(
+        {ShaderDescriptor{
+             .shader_type = GL_VERTEX_SHADER,
+             .source_size = (int32_t)trajectory_vertex_shader_source.size(),
+             .source      = trajectory_vertex_shader_source.data()},
+         ShaderDescriptor{
+             .shader_type = GL_FRAGMENT_SHADER,
+             .source_size = (int32_t)trajectory_fragment_shader_source.size(),
+             .source      = trajectory_fragment_shader_source.data()}});
 
-    uint32_t stretcher_vertex_shader_id   = opengl_program_compile_shader(stretcher_vertex_shader_source, GL_VERTEX_SHADER);
-    uint32_t stretcher_fragment_shader_id = opengl_program_compile_shader(stretcher_fragment_shader_source, GL_FRAGMENT_SHADER);
-    uint32_t stretcher_program            = opengl_program_create_program(stretcher_vertex_shader_id, stretcher_fragment_shader_id);
+    Program* stretcher_program = new Program(
+        {ShaderDescriptor{
+             .shader_type = GL_VERTEX_SHADER,
+             .source_size = (int32_t)stretcher_vertex_shader_source.size(),
+             .source      = stretcher_vertex_shader_source.data()},
+         ShaderDescriptor{
+             .shader_type = GL_FRAGMENT_SHADER,
+             .source_size = (int32_t)stretcher_fragment_shader_source.size(),
+             .source      = stretcher_fragment_shader_source.data()}});
 
-    uint32_t bounding_box_vertex_shader_id   = opengl_program_compile_shader(bounding_box_vertex_shader_source, GL_VERTEX_SHADER);
-    uint32_t bounding_box_fragment_shader_id = opengl_program_compile_shader(bounding_box_fragment_shader_source, GL_FRAGMENT_SHADER);
-    uint32_t bounding_box_program            = opengl_program_create_program(bounding_box_vertex_shader_id, bounding_box_fragment_shader_id);
+    Program* bounding_box_program = new Program(
+        {ShaderDescriptor{
+             .shader_type = GL_VERTEX_SHADER,
+             .source_size = (int32_t)bounding_box_vertex_shader_source.size(),
+             .source      = bounding_box_vertex_shader_source.data()},
+         ShaderDescriptor{
+             .shader_type = GL_FRAGMENT_SHADER,
+             .source_size = (int32_t)bounding_box_fragment_shader_source.size(),
+             .source      = bounding_box_fragment_shader_source.data()}});
 
-    uint32_t bounding_box_stretcher_vertex_shader_id   = opengl_program_compile_shader(bounding_box_stretcher_vertex_shader_source, GL_VERTEX_SHADER);
-    uint32_t bounding_box_stretcher_fragment_shader_id = opengl_program_compile_shader(bounding_box_stretcher_fragment_shader_source, GL_FRAGMENT_SHADER);
-    uint32_t bounding_box_stretcher_program            = opengl_program_create_program(bounding_box_stretcher_vertex_shader_id, bounding_box_stretcher_fragment_shader_id);
+    Program* bounding_box_stretcher_program = new Program(
+        {ShaderDescriptor{
+             .shader_type = GL_VERTEX_SHADER,
+             .source_size = (int32_t)bounding_box_stretcher_vertex_shader_source.size(),
+             .source      = bounding_box_stretcher_vertex_shader_source.data()},
+         ShaderDescriptor{
+             .shader_type = GL_FRAGMENT_SHADER,
+             .source_size = (int32_t)bounding_box_stretcher_fragment_shader_source.size(),
+             .source      = bounding_box_stretcher_fragment_shader_source.data()}});
 
     const std::vector<VertexBufferAttributeLayout> layout_color_point = opengl_vertex_array_get_vertex_layout<ColorPoint>();
     const std::vector<VertexBufferAttributeLayout> layout_point       = opengl_vertex_array_get_vertex_layout<Point>();
@@ -1310,9 +1352,9 @@ int main()
         if (g_draw_origin)
         {
             glLineWidth(g_origin_width);
-            glUseProgram(origin_program);
-            glProgramUniformMatrix4fv(origin_program, 0, 1, GL_FALSE, glm::value_ptr(MVP));
-            glProgramUniform1f(origin_program, 1, g_origin_scale);
+            origin_program->Bind();
+            origin_program->PushUniform16F32("u_MVP", MVP);
+            origin_program->PushUniform1F32("u_Scale", g_origin_scale);
             glBindVertexArray(origin_vao);
             glDrawArrays(GL_LINES, 0, 6);
             glLineWidth(1.0f);
@@ -1322,11 +1364,11 @@ int main()
         if (g_draw_camera_target)
         {
             glLineWidth(g_target_width);
-            glUseProgram(camera_target_program);
-            glProgramUniformMatrix4fv(camera_target_program, 0, 1, GL_FALSE, glm::value_ptr(MVP));
-            glProgramUniform3fv(camera_target_program, 1, 1, glm::value_ptr(camera.target));
-            glProgramUniform1f(camera_target_program, 2, g_target_scale);
-            glProgramUniform3fv(camera_target_program, 3, 1, glm::value_ptr(g_target_color));
+            camera_target_program->Bind();
+            camera_target_program->PushUniform16F32("u_MVP", MVP);
+            camera_target_program->PushUniform3F32("u_Translation", camera.target);
+            camera_target_program->PushUniform1F32("u_Scale", g_target_scale);
+            camera_target_program->PushUniform3F32("u_Color", g_target_color);
             glBindVertexArray(target_vao);
             glDrawArrays(GL_LINES, 0, 6);
             glLineWidth(1.0f);
@@ -1338,9 +1380,9 @@ int main()
             auto start = std::chrono::high_resolution_clock::now();
 
             glLineWidth(g_trajectory_width);
-            glUseProgram(trajectory_program);
-            glProgramUniformMatrix4fv(trajectory_program, 0, 1, GL_FALSE, glm::value_ptr(MVP));
-            glProgramUniform3fv(trajectory_program, 1, 1, glm::value_ptr(g_trajectory_color));
+            trajectory_program->Bind();
+            trajectory_program->PushUniform16F32("u_MVP", MVP);
+            trajectory_program->PushUniform3F32("u_Color", g_trajectory_color);
             glBindVertexArray(g_trajectory_positions_vao);
             glDrawArrays(GL_LINE_STRIP, 0, g_trajectory_positions.size());
             glLineWidth(1.0f);
@@ -1354,9 +1396,9 @@ int main()
         if (g_draw_optimized_trajectory && can_draw_optimized_trajectory)
         {
             glLineWidth(g_optimized_trajectory_width);
-            glUseProgram(trajectory_program);
-            glProgramUniformMatrix4fv(trajectory_program, 0, 1, GL_FALSE, glm::value_ptr(MVP));
-            glProgramUniform3fv(trajectory_program, 1, 1, glm::value_ptr(g_optimized_trajectory_color));
+            trajectory_program->Bind();
+            trajectory_program->PushUniform16F32("u_MVP", MVP);
+            trajectory_program->PushUniform3F32("u_Color", g_optimized_trajectory_color);
             glBindVertexArray(g_optimized_trajectory_positions_vao);
             glDrawArrays(GL_LINE_STRIP, 0, g_optimized_trajectory_positions.size());
             glLineWidth(1.0f);
@@ -1367,9 +1409,10 @@ int main()
         {
             auto start = std::chrono::high_resolution_clock::now();
 
-            glUseProgram(stretcher_program);
-            glProgramUniformMatrix4fv(stretcher_program, 0, 1, GL_FALSE, glm::value_ptr(MVP));
-            glProgramUniformMatrix4fv(stretcher_program, 1, 1, GL_FALSE, glm::value_ptr(stretcher_pose));
+            stretcher_program->Bind();
+            stretcher_program->PushUniform16F32("u_MVP", MVP);
+            stretcher_program->PushUniform16F32("u_Pose", stretcher_pose);
+
             glBindVertexArray(g_stretcher_vao);
             glDrawElements(GL_TRIANGLES, g_stretcher_indices.size(), GL_UNSIGNED_INT, nullptr);
 
@@ -1382,10 +1425,11 @@ int main()
         if (g_draw_stretcher_bbox && can_draw_stretcher)
         {
             glLineWidth(g_stretcher_box_width);
-            glUseProgram(bounding_box_stretcher_program);
-            glProgramUniformMatrix4fv(bounding_box_stretcher_program, 0, 1, GL_FALSE, glm::value_ptr(MVP));
-            glProgramUniform3fv(bounding_box_stretcher_program, 1, 1, glm::value_ptr(g_stretcher_box_color));
-            glProgramUniformMatrix4fv(bounding_box_stretcher_program, 2, 1, GL_FALSE, glm::value_ptr(stretcher_pose));
+
+            bounding_box_stretcher_program->Bind();
+            bounding_box_stretcher_program->PushUniform16F32("u_MVP", MVP);
+            bounding_box_stretcher_program->PushUniform3F32("u_Color", g_stretcher_box_color);
+            bounding_box_stretcher_program->PushUniform16F32("u_Pose", stretcher_pose);
             glBindVertexArray(g_stretcher_aabb_vao);
             glDrawArrays(GL_LINES, 0, 24);
             glLineWidth(1.0f);
@@ -1401,8 +1445,9 @@ int main()
             glm::vec3 camera_pos = glm::vec3(glm::inverse(view)[3]);
 
             glPointSize(g_point_cloud_point_size);
-            glUseProgram(point_cloud_program);
-            glProgramUniformMatrix4fv(point_cloud_program, 0, 1, GL_FALSE, glm::value_ptr(MVP));
+
+            point_cloud_program->Bind();
+            point_cloud_program->PushUniform16F32("u_MVP", MVP);
 
             for (auto& [ID, bucket] : g_buckets)
             {
@@ -1469,8 +1514,8 @@ int main()
 
             glm::vec3 camera_pos = glm::vec3(glm::inverse(view)[3]);
 
-            glUseProgram(bounding_box_program);
-            glProgramUniformMatrix4fv(bounding_box_program, 0, 1, GL_FALSE, glm::value_ptr(MVP));
+            bounding_box_program->Bind();
+            bounding_box_program->PushUniform16F32("u_MVP", MVP);
 
             for (auto& [ID, bucket] : g_buckets)
             {
@@ -1486,7 +1531,8 @@ int main()
                 {
                     glLineWidth(g_point_cloud_bbox_in_obb_width);
                     glm::vec3 red(1.0f, 0.0f, 0.0f);
-                    glProgramUniform3fv(bounding_box_program, 1, 1, glm::value_ptr(red));
+
+                    bounding_box_program->PushUniform3F32("u_Color", red);
 
                     glBindVertexArray(bucket.bbox_vao);
                     glDrawArrays(GL_LINES, 0, 24);
@@ -1499,7 +1545,8 @@ int main()
                 {
                     glLineWidth(g_point_cloud_bbox_in_obb_proximity_width);
                     glm::vec3 blue(0.0f, 0.0f, 1.0f);
-                    glProgramUniform3fv(bounding_box_program, 1, 1, glm::value_ptr(blue));
+
+                    bounding_box_program->PushUniform3F32("u_Color", blue);
 
                     glBindVertexArray(bucket.bbox_vao);
                     glDrawArrays(GL_LINES, 0, 24);
@@ -1512,7 +1559,8 @@ int main()
                 {
                     glLineWidth(g_point_cloud_bbox_width);
                     glm::vec3 white(1.0f, 1.0f, 1.0f);
-                    glProgramUniform3fv(bounding_box_program, 1, 1, glm::value_ptr(white));
+
+                    bounding_box_program->PushUniform3F32("u_Color", white);
 
                     glBindVertexArray(bucket.bbox_vao);
                     glDrawArrays(GL_LINES, 0, 24);
