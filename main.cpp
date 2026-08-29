@@ -18,14 +18,12 @@
 
 #include <cave-traversal-tool/Camera.h>
 #include <cave-traversal-tool/Config.h>
-#include <cave-traversal-tool/Helpers.h>
 #include <cave-traversal-tool/Structures.h>
 
 #include <cave-traversal-tool/OpenGL/Buffer.h>
 #include <cave-traversal-tool/OpenGL/Program.h>
 #include <cave-traversal-tool/OpenGL/VertexArray.h>
-
-#include <cave-traversal-tool/GPUData.h>
+  
 #include <cave-traversal-tool/Processing.h>
 
 #include <glm/glm.hpp>
@@ -39,8 +37,6 @@
 #include <ImGuizmo.h>
 
 #include <portable-file-dialogs.h>
-
-#include "from_hdmapping/pair_wise_iterative_closest_point.h"
 
 #define CHECK_BOOL(expression)                                    \
     do                                                            \
@@ -59,9 +55,8 @@ static uint32_t g_stretcher_aabb_vbo = UINT32_MAX;
 static uint32_t g_stretcher_aabb_vao = UINT32_MAX;
 static AABB     g_stretcher_aabb{};
 
-static std::vector<ColorPoint>      g_stretcher_vertices{};
-static std::vector<uint32_t>        g_stretcher_indices{};
-static std::vector<Eigen::Vector3d> g_stretcher_icp_source{};
+static std::vector<ColorPoint> g_stretcher_vertices{};
+static std::vector<uint32_t>   g_stretcher_indices{};
 
 static std::vector<Point>                          g_trajectory_positions{};
 static std::vector<TrajectoryPoseOrientationMat33> g_trajectory_orientations_mat33{};
@@ -69,9 +64,6 @@ static std::vector<TrajectoryPoseOrientationMat33> g_trajectory_orientations_mat
 static std::vector<Point>                          g_optimized_trajectory_positions{};
 static std::vector<TrajectoryPoseOrientationMat33> g_optimized_trajectory_orientations_mat33{};
 
-// static std::vector<Eigen::Affine3d> g_optimized_trajectory_poses{};
-
-static float g_cpu_time_icp_ms                    = 0.0f;
 static float g_cpu_time_draw_trajectory_ms        = 0.0f;
 static float g_cpu_time_draw_stretcher_ms         = 0.0f;
 static float g_cpu_time_draw_cave_buckets_ms      = 0.0f;
@@ -100,11 +92,6 @@ static bool g_draw_bounding_box         = true;
 
 static bool      g_enable_inactive_state = false;
 static glm::vec3 g_clear_color           = {0.2f, 0.2f, 0.2f};
-
-static bool   g_enable_icp_optimization_for_autoplay = false;
-static double g_icp_search_radious                   = 0.3;
-static bool   g_icp_is_repulsion                     = true;
-static int    g_icp_number_of_iterations             = 30;
 
 static float g_origin_scale = 1.0f;
 static float g_origin_width = 1.0f;
@@ -153,11 +140,6 @@ static uint32_t g_trajectory_index                     = 0;
 
 // gizmo
 static bool g_modify_current_pose_with_gizmo = false;
-
-glm::vec3 reorient(const glm::vec3& normal, const glm::vec3& normal_origin, const glm::vec3& point)
-{
-    return glm::dot(normal, point - normal_origin) >= 0.0f ? normal : -normal;
-}
 
 template <typename T>
 static size_t std_vector_size(const std::vector<T>& vector)
@@ -486,13 +468,6 @@ static inline void load_object()
 
     CHECK_BOOL(load_stretcher_ply(filename, g_stretcher_vertices, g_stretcher_indices));
     rebuild_stretcher_opengl_data();
-
-    g_stretcher_icp_source = {};
-
-    for (const auto& stretcher_vertex : g_stretcher_vertices)
-    {
-        g_stretcher_icp_source.push_back(Eigen::Vector3d(stretcher_vertex.position.x, stretcher_vertex.position.y, stretcher_vertex.position.z));
-    }
 }
 
 static inline void load_object_bin()
@@ -518,13 +493,6 @@ static inline void load_object_bin()
 
     CHECK_BOOL(load_stretcher_bin(filename, g_stretcher_vertices, g_stretcher_indices));
     rebuild_stretcher_opengl_data();
-
-    g_stretcher_icp_source = {};
-
-    for (const auto& stretcher_vertex : g_stretcher_vertices)
-    {
-        g_stretcher_icp_source.push_back(Eigen::Vector3d(stretcher_vertex.position.x, stretcher_vertex.position.y, stretcher_vertex.position.z));
-    }
 }
 
 static inline void save_object_bin()
@@ -694,6 +662,8 @@ int main()
 
     glfwMakeContextCurrent(window);
 
+    glfwSwapInterval(1);
+
     gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 
     // glEnable(GL_DEBUG_OUTPUT);
@@ -839,7 +809,6 @@ int main()
             {
                 ImGui::Text("Framerate  : %.3f FPS", ImGui::GetIO().Framerate);
                 ImGui::Text("Frame time : %.3f ms", ImGui::GetIO().DeltaTime * 1000.0f);
-                ImGui::Text("g_cpu_time_icp_ms                    : %.3f ms", g_cpu_time_icp_ms);
                 ImGui::Text("g_cpu_time_draw_trajectory_ms        : %.3f ms", g_cpu_time_draw_trajectory_ms);
                 ImGui::Text("g_cpu_time_draw_stretcher_ms         : %.3f ms", g_cpu_time_draw_stretcher_ms);
                 ImGui::Text("g_cpu_time_draw_cave_buckets_ms      : %.3f ms", g_cpu_time_draw_cave_buckets_ms);
@@ -1022,39 +991,6 @@ int main()
             }
 
             ImGui::Separator();
-            if (ImGui::TreeNode("ICP"))
-            {
-                const double search_radious_min = 0.0;
-                const double search_radious_max = DBL_MAX;
-
-                ImGui::Checkbox("g_enable_icp_optimization_for_autoplay", &g_enable_icp_optimization_for_autoplay);
-                ImGui::DragScalar("g_icp_search_radious", ImGuiDataType_Double, &g_icp_search_radious, 0.01f, &search_radious_min, &search_radious_max);
-                ImGui::Checkbox("g_icp_is_repulsion", &g_icp_is_repulsion);
-                ImGui::DragInt("g_icp_number_of_iterations", &g_icp_number_of_iterations, 1.0f, 1, INT32_MAX);
-
-                if (ImGui::Button("Save resulting optimized trajectory"))
-                {
-                    std::string filename = pfd::save_file(
-                                               "Save trajectory result - TXT",
-                                               "",
-                                               {"Text files", "*.txt"})
-                                               .result();
-
-                    if (filename.empty())
-                    {
-                        spdlog::info("PFD result emplty - doing nothing ...");
-                    }
-                    else
-                    {
-                        __debugbreak();
-                        // write_affine3d_trajectory_to_txt(g_optimized_trajectory_poses, filename);
-                    }
-                }
-
-                ImGui::TreePop();
-            }
-
-            ImGui::Separator();
             if (ImGui::TreeNode("Display"))
             {
                 ImGui::DragFloat("g_origin_scale", &g_origin_scale, 0.1f, 1.0f, FLT_MAX);
@@ -1178,128 +1114,6 @@ int main()
             }
         }
 
-        if (g_enable_icp_optimization_for_autoplay && (g_trajectory_index_auto_play || ImGui::Button("Single ICP iteration")))
-        {
-            auto start = std::chrono::high_resolution_clock::now();
-
-            const auto& in_obb_ids           = in_obb_ids_in_obb_proximity.first;
-            const auto& in_obb_proximity_ids = in_obb_ids_in_obb_proximity.second;
-
-            std::vector<Eigen::Vector3d> target         = {};
-            std::vector<Eigen::Vector3d> target_normals = {};
-
-            for (const auto& in_obb_id : in_obb_ids)
-            {
-                PointCloudLOD* last_lod = g_buckets[in_obb_id].lods;
-
-                while (last_lod->next)
-                {
-                    last_lod = last_lod->next;
-                }
-
-                for (const auto& point : last_lod->points)
-                {
-                    const glm::vec3 normal_reoriented = reorient(point.normal, point.position, stretcher_position);
-                    target.emplace_back(static_cast<double>(point.position.x), static_cast<double>(point.position.y), static_cast<double>(point.position.z));
-                    target_normals.emplace_back(static_cast<double>(normal_reoriented.x), static_cast<double>(normal_reoriented.y), static_cast<double>(normal_reoriented.z));
-                }
-            }
-
-            for (const auto& in_obb_proximity_id : in_obb_proximity_ids)
-            {
-                PointCloudLOD* last_lod = g_buckets[in_obb_proximity_id].lods;
-
-                while (last_lod->next)
-                {
-                    last_lod = last_lod->next;
-                }
-
-                for (const auto& point : last_lod->points)
-                {
-                    const glm::vec3 normal_reoriented = reorient(point.normal, point.position, stretcher_position);
-                    target.emplace_back(static_cast<double>(point.position.x), static_cast<double>(point.position.y), static_cast<double>(point.position.z));
-                    target_normals.emplace_back(static_cast<double>(normal_reoriented.x), static_cast<double>(normal_reoriented.y), static_cast<double>(normal_reoriented.z));
-                }
-            }
-
-            const glm::dmat4 stretcher_pose_double = glm::dmat4(stretcher_pose);
-            Eigen::Affine3d  m_pose_result         = glm_mat4_to_eigen_affine_3d(stretcher_pose_double);
-
-            static Eigen::Affine3d m_previous_pose = m_pose_result;
-
-#define DEBUG_LOG 0
-
-#if DEBUG_LOG
-            spdlog::warn("ICP :");
-            spdlog::warn(" - input glm pose   : {}", glm_dmat4_to_string(stretcher_pose_double));
-            spdlog::warn(" - input eigen pose : {}", eigen_affine3d_to_string(m_pose_result));
-            spdlog::warn(" - source points : {}", g_stretcher_icp_source.size());
-            spdlog::warn(" - target points : {}", target.size());
-#endif
-
-            auto ppose = m_pose_result;
-
-            PairWiseICP icp{};
-            icp.compute(g_stretcher_icp_source, target, target_normals, g_icp_search_radious, g_icp_number_of_iterations, m_pose_result, g_icp_is_repulsion, m_previous_pose);
-
-            //  static int32_t indx = 0;
-            //
-            //  if (std::ofstream ofs = std::ofstream(std::to_string(indx++) + ".txt", std::ios::out))
-            //  {
-            //      if (target.size() != target_normals.size())
-            //      {
-            //          std::exit(2);
-            //      }
-            //
-            //      for (size_t i = 0; i < target.size(); i++)
-            //      {
-            //          ofs << target[i].x() << ' ' << target[i].y() << ' ' << target[i].z() << ' ' << target_normals[i].x() << ' ' << target_normals[i].y() << ' ' << target_normals[i].z() << '\n';
-            //      }
-            //  }
-
-            double dist = (m_pose_result.translation() - m_previous_pose.translation()).norm();
-
-            if (dist > 1.0)
-            {
-                m_previous_pose = ppose;
-            }
-
-#if DEBUG_LOG
-            spdlog::warn("ICP result:");
-            spdlog::warn(" - input glm pose   : {}", glm_dmat4_to_string(stretcher_pose_double));
-            spdlog::warn(" - output eigen pose : {}", eigen_affine3d_to_string(m_pose_result));
-#endif
-
-            if (g_trajectory_index_auto_play)
-            {
-                const Eigen::Affine3f m_pose_result_float = m_pose_result.cast<float>();
-
-                const glm::mat4 m_pose_result_float_glm       = glm::make_mat4(m_pose_result_float.data());
-                const auto      m_pose_result_float_glm_trans = glm::vec3(m_pose_result_float_glm[3]);
-                const auto      m_pose_result_float_glm_rot   = glm::mat3(m_pose_result_float_glm);
-
-                g_optimized_trajectory_positions.push_back(Point{m_pose_result_float_glm_trans});
-                g_optimized_trajectory_orientations_mat33.push_back(TrajectoryPoseOrientationMat33{m_pose_result_float_glm_rot});
-
-                // g_optimized_trajectory_poses.push_back(m_pose_result);
-
-                const Eigen::Vector3f position = m_pose_result_float.translation().eval();
-
-                glNamedBufferSubData(g_optimized_trajectory_positions_vbo, sizeof(Eigen::Vector3f) * (g_optimized_trajectory_positions.size() - 1), sizeof(Eigen::Vector3f), position.data());
-
-                /// TEST
-                {
-                    const auto new_stretcher_pose = m_pose_result_float.matrix().eval();
-
-                    std::memcpy(glm::value_ptr(stretcher_pose), new_stretcher_pose.data(), sizeof(float) * 16);
-                }
-            }
-
-            auto end = std::chrono::high_resolution_clock::now();
-
-            g_cpu_time_icp_ms = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() / 1'000'000.0f;
-        }
-
         ImGui::Checkbox("g_modify_current_pose_with_gizmo", &g_modify_current_pose_with_gizmo);
 
         ImGui::End();
@@ -1354,7 +1168,7 @@ int main()
                 g_trajectory_positions[g_trajectory_index].position             = position;
                 g_trajectory_orientations_mat33[g_trajectory_index].orientation = rotation;
 
-                glNamedBufferSubData(g_trajectory_positions_vbo, sizeof(Eigen::Vector3f) * g_trajectory_index, sizeof(Eigen::Vector3f), &g_trajectory_positions[g_trajectory_index].position);
+                glNamedBufferSubData(g_trajectory_positions_vbo, sizeof(glm::vec3) * g_trajectory_index, sizeof(glm::vec3), &g_trajectory_positions[g_trajectory_index].position);
             }
         }
 
