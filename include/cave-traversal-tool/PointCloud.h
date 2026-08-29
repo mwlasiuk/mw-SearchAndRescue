@@ -3,6 +3,7 @@
 #include "Structures.h"
 
 #include "OpenGL/Buffer.h"
+#include "OpenGL/VertexArray.h"
 
 struct PointCloudLOD
 {
@@ -11,8 +12,8 @@ struct PointCloudLOD
     glm::vec3 min = {};
     glm::vec3 max = {};
 
-    Buffer*  vbo = nullptr;
-    uint32_t vao = UINT32_MAX;
+    Buffer*      vbo = nullptr;
+    VertexArray* vao = nullptr;
 
     PointCloudLOD* next = nullptr;
 };
@@ -25,8 +26,8 @@ struct PointCloudRecord
 
     PointCloudLOD* lods = nullptr;
 
-    Buffer*  bbox_vbo = nullptr;
-    uint32_t bbox_vao = UINT32_MAX;
+    Buffer*      bbox_vbo = nullptr;
+    VertexArray* bbox_vao = nullptr;
 };
 
 struct ivec3_hash_operator

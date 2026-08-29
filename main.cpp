@@ -51,9 +51,9 @@
 static std::vector<NormalPoint> g_cave_vertices{};
 static PointCloudBucket         g_buckets{};
 
-static Buffer*  g_stretcher_aabb_vbo = nullptr;
-static uint32_t g_stretcher_aabb_vao = UINT32_MAX;
-static AABB     g_stretcher_aabb{};
+static Buffer*      g_stretcher_aabb_vbo = nullptr;
+static VertexArray* g_stretcher_aabb_vao = nullptr;
+static AABB         g_stretcher_aabb{};
 
 static std::vector<ColorPoint> g_stretcher_vertices{};
 static std::vector<uint32_t>   g_stretcher_indices{};
@@ -115,12 +115,12 @@ static bool g_point_cloud_bucket_draw                  = false;
 static bool g_point_cloud_bucket_in_obb_draw           = true;
 static bool g_point_cloud_bucket_in_obb_proximity_draw = true;
 
-static Buffer*  g_stretcher_vbo          = nullptr;
-static Buffer*  g_stretcher_index_buffer = nullptr;
-static uint32_t g_stretcher_vao          = UINT32_MAX;
+static Buffer*      g_stretcher_vbo          = nullptr;
+static Buffer*      g_stretcher_index_buffer = nullptr;
+static VertexArray* g_stretcher_vao          = nullptr;
 
-static Buffer*  g_trajectory_positions_vbo = nullptr;
-static uint32_t g_trajectory_positions_vao = UINT32_MAX;
+static Buffer*      g_trajectory_positions_vbo = nullptr;
+static VertexArray* g_trajectory_positions_vao = nullptr;
 
 //
 static bool     g_trajectory_index_auto_play           = false;
@@ -166,10 +166,10 @@ static void rebuild_trajectory_mat33_opengl_data()
 
     g_trajectory_index = 0;
 
-    if (g_trajectory_positions_vao != UINT32_MAX)
+    if (g_trajectory_positions_vao)
     {
-        spdlog::debug("Deleting old trajectory positions VAO : {}", g_trajectory_positions_vao);
-        glDeleteVertexArrays(1, &g_trajectory_positions_vao);
+        spdlog::debug("Deleting old trajectory positions VAO : {}", g_trajectory_positions_vao->GetID());
+        delete g_trajectory_positions_vao;
     }
 
     if (g_trajectory_positions_vbo)
@@ -179,9 +179,9 @@ static void rebuild_trajectory_mat33_opengl_data()
     }
 
     g_trajectory_positions_vbo = new Buffer(GL_DYNAMIC_STORAGE_BIT, std_vector_size(g_trajectory_positions), g_trajectory_positions.data());
-    g_trajectory_positions_vao = opengl_vertex_array_create_vertex_array(g_trajectory_positions_vbo->GetID(), true, UINT32_MAX, false, layout_point);
+    g_trajectory_positions_vao = new VertexArray(g_trajectory_positions_vbo, false, nullptr, false, layout_point);
 
-    spdlog::debug("Created VAO [{}] and VBO [{}]", g_trajectory_positions_vao, g_trajectory_positions_vbo->GetID());
+    spdlog::debug("Created VAO [{}] and VBO [{}]", g_trajectory_positions_vao->GetID(), g_trajectory_positions_vbo->GetID());
 }
 
 static void rebuild_stretcher_opengl_data()
@@ -189,10 +189,10 @@ static void rebuild_stretcher_opengl_data()
     const std::vector<VertexBufferAttributeLayout> layout_color_point = opengl_vertex_array_get_vertex_layout<ColorPoint>();
     const std::vector<VertexBufferAttributeLayout> layout_point       = opengl_vertex_array_get_vertex_layout<Point>();
 
-    if (g_stretcher_aabb_vao != UINT32_MAX)
+    if (g_stretcher_aabb_vao)
     {
-        spdlog::debug("Deleting old stretcher AABB positions VAO : {}", g_stretcher_aabb_vao);
-        glDeleteVertexArrays(1, &g_stretcher_aabb_vao);
+        spdlog::debug("Deleting old stretcher AABB positions VAO : {}", g_stretcher_aabb_vao->GetID());
+        delete g_stretcher_aabb_vao;
     }
 
     if (g_stretcher_aabb_vbo)
@@ -201,10 +201,10 @@ static void rebuild_stretcher_opengl_data()
         delete g_stretcher_aabb_vbo;
     }
 
-    if (g_stretcher_vao != UINT32_MAX)
+    if (g_stretcher_vao)
     {
-        spdlog::debug("Deleting old stretcher positions VAO : {}", g_stretcher_vao);
-        glDeleteVertexArrays(1, &g_stretcher_vao);
+        spdlog::debug("Deleting old stretcher positions VAO : {}", g_stretcher_vao->GetID());
+        delete g_stretcher_vao;
     }
 
     if (g_stretcher_vbo)
@@ -259,14 +259,14 @@ static void rebuild_stretcher_opengl_data()
         {{g_stretcher_aabb.min.x, g_stretcher_aabb.max.y, g_stretcher_aabb.max.z}}};
 
     g_stretcher_aabb_vbo = new Buffer(GL_NONE, std_vector_size(line_vertices), line_vertices.data());
-    g_stretcher_aabb_vao = opengl_vertex_array_create_vertex_array(g_stretcher_aabb_vbo->GetID(), true, UINT32_MAX, 0, layout_point);
+    g_stretcher_aabb_vao = new VertexArray(g_stretcher_aabb_vbo, false, nullptr, false, layout_point);
 
     g_stretcher_vbo          = new Buffer(GL_DYNAMIC_STORAGE_BIT, std_vector_size(g_stretcher_vertices), g_stretcher_vertices.data());
     g_stretcher_index_buffer = new Buffer(GL_DYNAMIC_STORAGE_BIT, std_vector_size(g_stretcher_indices), g_stretcher_indices.data());
 
-    g_stretcher_vao = opengl_vertex_array_create_vertex_array(g_stretcher_vbo->GetID(), true, g_stretcher_index_buffer->GetID(), true, layout_color_point);
+    g_stretcher_vao = new VertexArray(g_stretcher_vbo, false, g_stretcher_index_buffer, false, layout_color_point);
 
-    spdlog::debug("Created VAO [{}], VBO [{}] and IBO [{}]", g_stretcher_vao, g_stretcher_vbo->GetID(), g_stretcher_index_buffer->GetID());
+    spdlog::debug("Created VAO [{}], VBO [{}] and IBO [{}]", g_stretcher_vao->GetID(), g_stretcher_vbo->GetID(), g_stretcher_index_buffer->GetID());
 }
 
 static void rebuild_cave_opengl_data()
@@ -281,11 +281,11 @@ static void rebuild_cave_opengl_data()
         PointCloudLOD* current = bucket.lods;
         while (current)
         {
-            if (current->vao != UINT32_MAX)
+            if (current->vao)
             {
-                spdlog::debug("Deleting old cave [ID = {} {} {}] VAO [{}]", ID.x, ID.y, ID.z, current->vao);
-                glDeleteVertexArrays(1, &current->vao);
-                current->vao = UINT32_MAX;
+                spdlog::debug("Deleting old cave [ID = {} {} {}] VAO [{}]", ID.x, ID.y, ID.z, current->vao->GetID());
+                delete current->vao;
+                current->vao = nullptr;
             }
 
             if (current->vbo)
@@ -303,11 +303,11 @@ static void rebuild_cave_opengl_data()
         bucket.lods = nullptr;
         bucket.draw = false;
 
-        if (bucket.bbox_vao != UINT32_MAX)
+        if (bucket.bbox_vao)
         {
-            spdlog::debug("Deleting old bounding box VAO [{}] for ID = {} {} {}", bucket.bbox_vao, ID.x, ID.y, ID.z);
-            glDeleteVertexArrays(1, &bucket.bbox_vao);
-            bucket.bbox_vao = UINT32_MAX;
+            spdlog::debug("Deleting old bounding box VAO [{}] for ID = {} {} {}", bucket.bbox_vao->GetID(), ID.x, ID.y, ID.z);
+            delete bucket.bbox_vao;
+            bucket.bbox_vao = nullptr;
         }
 
         if (bucket.bbox_vbo)
@@ -331,9 +331,9 @@ static void rebuild_cave_opengl_data()
             if (!current->points.empty())
             {
                 current->vbo = new Buffer(GL_DYNAMIC_STORAGE_BIT, std_vector_size(current->points), current->points.data());
-                current->vao = opengl_vertex_array_create_vertex_array(current->vbo->GetID(), true, UINT32_MAX, 0, layout_normal_point);
+                current->vao = new VertexArray(current->vbo, false, nullptr, false, layout_normal_point);
 
-                spdlog::debug("Created LOD [{}] VAO [{}] and VBO [{}] for ID = [{} {} {}]", lod_level, current->vao, current->vbo->GetID(), ID.x, ID.y, ID.z);
+                spdlog::debug("Created LOD [{}] VAO [{}] and VBO [{}] for ID = [{} {} {}]", lod_level, current->vao->GetID(), current->vbo->GetID(), ID.x, ID.y, ID.z);
             }
 
             current = current->next;
@@ -372,7 +372,7 @@ static void rebuild_cave_opengl_data()
             {{min.x, max.y, max.z}}};
 
         bucket.bbox_vbo = new Buffer(GL_NONE, std_vector_size(box_vertices), box_vertices.data());
-        bucket.bbox_vao = opengl_vertex_array_create_vertex_array(bucket.bbox_vbo->GetID(), true, UINT32_MAX, false, layout_point);
+        bucket.bbox_vao = new VertexArray(bucket.bbox_vbo, false, nullptr, false, layout_point); //
     }
 }
 
@@ -609,11 +609,11 @@ int main()
     const std::vector<VertexBufferAttributeLayout> layout_color_point = opengl_vertex_array_get_vertex_layout<ColorPoint>();
     const std::vector<VertexBufferAttributeLayout> layout_point       = opengl_vertex_array_get_vertex_layout<Point>();
 
-    Buffer*  origin_buffer = new Buffer(GL_DYNAMIC_STORAGE_BIT, std_vector_size(origin), origin.data());
-    uint32_t origin_vao    = opengl_vertex_array_create_vertex_array(origin_buffer->GetID(), true, UINT32_MAX, false, layout_color_point);
+    Buffer*      origin_buffer = new Buffer(GL_DYNAMIC_STORAGE_BIT, std_vector_size(origin), origin.data());
+    VertexArray* origin_vao    = new VertexArray(origin_buffer, false, nullptr, false, layout_color_point);
 
-    Buffer*  target_buffer = new Buffer(GL_DYNAMIC_STORAGE_BIT, std_vector_size(target), target.data());
-    uint32_t target_vao    = opengl_vertex_array_create_vertex_array(target_buffer->GetID(), true, UINT32_MAX, false, layout_point);
+    Buffer*      target_buffer = new Buffer(GL_DYNAMIC_STORAGE_BIT, std_vector_size(target), target.data());
+    VertexArray* target_vao    = new VertexArray(target_buffer, false, nullptr, false, layout_point);
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -1171,8 +1171,8 @@ int main()
             origin_program->Bind();
             origin_program->PushUniform16F32("u_MVP", MVP);
             origin_program->PushUniform1F32("u_Scale", g_origin_scale);
-            glBindVertexArray(origin_vao);
-            glDrawArrays(GL_LINES, 0, 6);
+            origin_vao->Bind();
+            origin_vao->DrawArray(GL_LINES, 6);
             glLineWidth(1.0f);
         }
 
@@ -1185,8 +1185,8 @@ int main()
             camera_target_program->PushUniform3F32("u_Translation", camera.target);
             camera_target_program->PushUniform1F32("u_Scale", g_target_scale);
             camera_target_program->PushUniform3F32("u_Color", g_target_color);
-            glBindVertexArray(target_vao);
-            glDrawArrays(GL_LINES, 0, 6);
+            target_vao->Bind();
+            target_vao->DrawArray(GL_LINES, 6);
             glLineWidth(1.0f);
         }
 
@@ -1199,8 +1199,8 @@ int main()
             trajectory_program->Bind();
             trajectory_program->PushUniform16F32("u_MVP", MVP);
             trajectory_program->PushUniform3F32("u_Color", g_trajectory_color);
-            glBindVertexArray(g_trajectory_positions_vao);
-            glDrawArrays(GL_LINE_STRIP, 0, g_trajectory_positions.size());
+            g_trajectory_positions_vao->Bind();
+            g_trajectory_positions_vao->DrawArray(GL_LINE_STRIP, g_trajectory_positions.size());
             glLineWidth(1.0f);
 
             auto end = std::chrono::high_resolution_clock::now();
@@ -1217,8 +1217,8 @@ int main()
             stretcher_program->PushUniform16F32("u_MVP", MVP);
             stretcher_program->PushUniform16F32("u_Pose", stretcher_pose);
 
-            glBindVertexArray(g_stretcher_vao);
-            glDrawElements(GL_TRIANGLES, g_stretcher_indices.size(), GL_UNSIGNED_INT, nullptr);
+            g_stretcher_vao->Bind();
+            g_stretcher_vao->DrawElements(GL_TRIANGLES, g_stretcher_indices.size(), 1, 0);
 
             auto end = std::chrono::high_resolution_clock::now();
 
@@ -1234,8 +1234,8 @@ int main()
             bounding_box_stretcher_program->PushUniform16F32("u_MVP", MVP);
             bounding_box_stretcher_program->PushUniform3F32("u_Color", g_stretcher_box_color);
             bounding_box_stretcher_program->PushUniform16F32("u_Pose", stretcher_pose);
-            glBindVertexArray(g_stretcher_aabb_vao);
-            glDrawArrays(GL_LINES, 0, 24);
+            g_stretcher_aabb_vao->Bind();
+            g_stretcher_aabb_vao->DrawArray(GL_LINES, 24);
             glLineWidth(1.0f);
         }
 
@@ -1282,22 +1282,22 @@ int main()
 
                 if (is_in_obb && g_point_cloud_bucket_in_obb_draw)
                 {
-                    glBindVertexArray(lod->vao);
-                    glDrawArrays(GL_POINTS, 0, lod->points.size());
+                    lod->vao->Bind();
+                    lod->vao->DrawArray(GL_POINTS, lod->points.size());
                     continue;
                 }
 
                 if (is_on_obb_proximity && g_point_cloud_bucket_in_obb_proximity_draw)
                 {
-                    glBindVertexArray(lod->vao);
-                    glDrawArrays(GL_POINTS, 0, lod->points.size());
+                    lod->vao->Bind();
+                    lod->vao->DrawArray(GL_POINTS, lod->points.size());
                     continue;
                 }
 
                 if (g_point_cloud_bucket_draw && !(is_in_obb || is_on_obb_proximity))
                 {
-                    glBindVertexArray(lod->vao);
-                    glDrawArrays(GL_POINTS, 0, lod->points.size());
+                    lod->vao->Bind();
+                    lod->vao->DrawArray(GL_POINTS, lod->points.size());
                     continue;
                 }
             }
@@ -1338,8 +1338,8 @@ int main()
 
                     bounding_box_program->PushUniform3F32("u_Color", red);
 
-                    glBindVertexArray(bucket.bbox_vao);
-                    glDrawArrays(GL_LINES, 0, 24);
+                    bucket.bbox_vao->Bind();
+                    bucket.bbox_vao->DrawArray(GL_LINES, 24);
 
                     glLineWidth(1.0f);
 
@@ -1352,8 +1352,8 @@ int main()
 
                     bounding_box_program->PushUniform3F32("u_Color", blue);
 
-                    glBindVertexArray(bucket.bbox_vao);
-                    glDrawArrays(GL_LINES, 0, 24);
+                    bucket.bbox_vao->Bind();
+                    bucket.bbox_vao->DrawArray(GL_LINES, 24);
 
                     glLineWidth(1.0f);
 
@@ -1366,8 +1366,8 @@ int main()
 
                     bounding_box_program->PushUniform3F32("u_Color", white);
 
-                    glBindVertexArray(bucket.bbox_vao);
-                    glDrawArrays(GL_LINES, 0, 24);
+                    bucket.bbox_vao->Bind();
+                    bucket.bbox_vao->DrawArray(GL_LINES, 24);
 
                     glLineWidth(1.0f);
 
