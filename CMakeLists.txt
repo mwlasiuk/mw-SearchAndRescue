@@ -37,8 +37,11 @@ set(SPDLOG_BUILD_TESTS   OFF CACHE BOOL "" FORCE)
 set(SPDLOG_BUILD_BENCH   OFF CACHE BOOL "" FORCE)
 set(SPDLOG_BUILD_EXAMPLE OFF CACHE BOOL "" FORCE)
 
+set(LASZIP_BUILD_STATIC  ON  CACHE BOOL "" FORCE)
+
 add_subdirectory(external/glfw)
 add_subdirectory(external/spdlog)
+add_subdirectory(external/LASzip)
 
 add_executable(cave-traversal-tool main.cpp)
 
@@ -71,6 +74,20 @@ target_link_libraries(cave-traversal-tool
     PRIVATE
         glfw)
 
+if(WIN32)
+    target_link_libraries(cave-traversal-tool
+        PRIVATE
+            laszip3
+            laszip_api3
+    )
+else()
+    target_link_libraries(cave-traversal-tool
+        PRIVATE
+            laszip
+            laszip_api
+    )
+endif()
+
 target_include_directories(cave-traversal-tool
     PRIVATE
         include
@@ -83,4 +100,6 @@ target_include_directories(cave-traversal-tool
         external/imgui/backends
         external/ImGuizmo/src
         external/portable-file-dialogs
-        external/happly)
+        external/happly
+        external/LASzip/include/laszip
+        external/LASzip/dll)
