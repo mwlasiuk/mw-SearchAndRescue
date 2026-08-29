@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cave-traversal-tool/Structures.h>
+#include <cave-traversal-tool/PointCloud.h>
 
 glm::ivec3 calculate_bucket_id(const glm::vec3& p, const float E, const bool use_centered);
 

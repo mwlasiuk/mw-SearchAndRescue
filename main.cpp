@@ -51,7 +51,7 @@
 static std::vector<NormalPoint> g_cave_vertices{};
 static PointCloudBucket         g_buckets{};
 
-static uint32_t g_stretcher_aabb_vbo = UINT32_MAX;
+static Buffer*  g_stretcher_aabb_vbo = nullptr;
 static uint32_t g_stretcher_aabb_vao = UINT32_MAX;
 static AABB     g_stretcher_aabb{};
 
@@ -115,11 +115,11 @@ static bool g_point_cloud_bucket_draw                  = false;
 static bool g_point_cloud_bucket_in_obb_draw           = true;
 static bool g_point_cloud_bucket_in_obb_proximity_draw = true;
 
-static uint32_t g_stretcher_vbo          = UINT32_MAX;
-static uint32_t g_stretcher_index_buffer = UINT32_MAX;
+static Buffer*  g_stretcher_vbo          = nullptr;
+static Buffer*  g_stretcher_index_buffer = nullptr;
 static uint32_t g_stretcher_vao          = UINT32_MAX;
 
-static uint32_t g_trajectory_positions_vbo = UINT32_MAX;
+static Buffer*  g_trajectory_positions_vbo = nullptr;
 static uint32_t g_trajectory_positions_vao = UINT32_MAX;
 
 //
@@ -172,16 +172,16 @@ static void rebuild_trajectory_mat33_opengl_data()
         glDeleteVertexArrays(1, &g_trajectory_positions_vao);
     }
 
-    if (g_trajectory_positions_vbo != UINT32_MAX)
+    if (g_trajectory_positions_vbo)
     {
-        spdlog::debug("Deleting old trajectory positions VBO : {}", g_trajectory_positions_vbo);
-        glDeleteBuffers(1, &g_trajectory_positions_vbo);
+        spdlog::debug("Deleting old trajectory positions VBO : {}", g_trajectory_positions_vbo->GetID());
+        delete g_trajectory_positions_vbo;
     }
 
-    g_trajectory_positions_vbo = opengl_buffer_create_buffer(std_vector_size(g_trajectory_positions), GL_DYNAMIC_STORAGE_BIT, g_trajectory_positions.data());
-    g_trajectory_positions_vao = opengl_vertex_array_create_vertex_array(g_trajectory_positions_vbo, true, UINT32_MAX, false, layout_point);
+    g_trajectory_positions_vbo = new Buffer(GL_DYNAMIC_STORAGE_BIT, std_vector_size(g_trajectory_positions), g_trajectory_positions.data());
+    g_trajectory_positions_vao = opengl_vertex_array_create_vertex_array(g_trajectory_positions_vbo->GetID(), true, UINT32_MAX, false, layout_point);
 
-    spdlog::debug("Created VAO [{}] and VBO [{}]", g_trajectory_positions_vao, g_trajectory_positions_vbo);
+    spdlog::debug("Created VAO [{}] and VBO [{}]", g_trajectory_positions_vao, g_trajectory_positions_vbo->GetID());
 }
 
 static void rebuild_stretcher_opengl_data()
@@ -195,10 +195,10 @@ static void rebuild_stretcher_opengl_data()
         glDeleteVertexArrays(1, &g_stretcher_aabb_vao);
     }
 
-    if (g_stretcher_aabb_vbo != UINT32_MAX)
+    if (g_stretcher_aabb_vbo)
     {
-        spdlog::debug("Deleting old stretcher AABB positions VBO : {}", g_stretcher_aabb_vbo);
-        glDeleteBuffers(1, &g_stretcher_aabb_vbo);
+        spdlog::debug("Deleting old stretcher AABB positions VBO : {}", g_stretcher_aabb_vbo->GetID());
+        delete g_stretcher_aabb_vbo;
     }
 
     if (g_stretcher_vao != UINT32_MAX)
@@ -207,16 +207,16 @@ static void rebuild_stretcher_opengl_data()
         glDeleteVertexArrays(1, &g_stretcher_vao);
     }
 
-    if (g_stretcher_vbo != UINT32_MAX)
+    if (g_stretcher_vbo)
     {
-        spdlog::debug("Deleting old stretcher positions VBO : {}", g_stretcher_vbo);
-        glDeleteBuffers(1, &g_stretcher_vbo);
+        spdlog::debug("Deleting old stretcher positions VBO : {}", g_stretcher_vbo->GetID());
+        delete g_stretcher_vbo;
     }
 
-    if (g_stretcher_index_buffer != UINT32_MAX)
+    if (g_stretcher_index_buffer)
     {
-        spdlog::debug("Deleting old stretcher index IBO : {}", g_stretcher_index_buffer);
-        glDeleteBuffers(1, &g_stretcher_index_buffer);
+        spdlog::debug("Deleting old stretcher index IBO : {}", g_stretcher_index_buffer->GetID());
+        delete g_stretcher_index_buffer;
     }
 
     g_stretcher_aabb.min = g_stretcher_vertices[0].position;
@@ -258,15 +258,15 @@ static void rebuild_stretcher_opengl_data()
         {{g_stretcher_aabb.min.x, g_stretcher_aabb.max.y, g_stretcher_aabb.min.z}},
         {{g_stretcher_aabb.min.x, g_stretcher_aabb.max.y, g_stretcher_aabb.max.z}}};
 
-    g_stretcher_aabb_vbo = opengl_buffer_create_buffer(std_vector_size(line_vertices), GL_NONE, line_vertices.data());
-    g_stretcher_aabb_vao = opengl_vertex_array_create_vertex_array(g_stretcher_aabb_vbo, true, UINT32_MAX, 0, layout_point);
+    g_stretcher_aabb_vbo = new Buffer(GL_NONE, std_vector_size(line_vertices), line_vertices.data());
+    g_stretcher_aabb_vao = opengl_vertex_array_create_vertex_array(g_stretcher_aabb_vbo->GetID(), true, UINT32_MAX, 0, layout_point);
 
-    g_stretcher_vbo          = opengl_buffer_create_buffer(std_vector_size(g_stretcher_vertices), GL_DYNAMIC_STORAGE_BIT, g_stretcher_vertices.data());
-    g_stretcher_index_buffer = opengl_buffer_create_buffer(std_vector_size(g_stretcher_indices), GL_DYNAMIC_STORAGE_BIT, g_stretcher_indices.data());
+    g_stretcher_vbo          = new Buffer(GL_DYNAMIC_STORAGE_BIT, std_vector_size(g_stretcher_vertices), g_stretcher_vertices.data());
+    g_stretcher_index_buffer = new Buffer(GL_DYNAMIC_STORAGE_BIT, std_vector_size(g_stretcher_indices), g_stretcher_indices.data());
 
-    g_stretcher_vao = opengl_vertex_array_create_vertex_array(g_stretcher_vbo, true, g_stretcher_index_buffer, true, layout_color_point);
+    g_stretcher_vao = opengl_vertex_array_create_vertex_array(g_stretcher_vbo->GetID(), true, g_stretcher_index_buffer->GetID(), true, layout_color_point);
 
-    spdlog::debug("Created VAO [{}], VBO [{}] and IBO [{}]", g_stretcher_vao, g_stretcher_vbo, g_stretcher_index_buffer);
+    spdlog::debug("Created VAO [{}], VBO [{}] and IBO [{}]", g_stretcher_vao, g_stretcher_vbo->GetID(), g_stretcher_index_buffer->GetID());
 }
 
 static void rebuild_cave_opengl_data()
@@ -288,11 +288,11 @@ static void rebuild_cave_opengl_data()
                 current->vao = UINT32_MAX;
             }
 
-            if (current->vbo != UINT32_MAX)
+            if (current->vbo)
             {
-                spdlog::debug("Deleting old cave [ID = {} {} {}] VBO [{}]", ID.x, ID.y, ID.z, current->vbo);
-                glDeleteBuffers(1, &current->vbo);
-                current->vbo = UINT32_MAX;
+                spdlog::debug("Deleting old cave [ID = {} {} {}] VBO [{}]", ID.x, ID.y, ID.z, current->vbo->GetID());
+                delete current->vbo;
+                current->vbo = nullptr;
             }
 
             current->points.clear();
@@ -310,11 +310,11 @@ static void rebuild_cave_opengl_data()
             bucket.bbox_vao = UINT32_MAX;
         }
 
-        if (bucket.bbox_vbo != UINT32_MAX)
+        if (bucket.bbox_vbo)
         {
-            spdlog::debug("Deleting old bounding box VBO [{}] for ID = {} {} {}", bucket.bbox_vbo, ID.x, ID.y, ID.z);
-            glDeleteBuffers(1, &bucket.bbox_vbo);
-            bucket.bbox_vbo = UINT32_MAX;
+            spdlog::debug("Deleting old bounding box VBO [{}] for ID = {} {} {}", bucket.bbox_vbo->GetID(), ID.x, ID.y, ID.z);
+            delete bucket.bbox_vbo;
+            bucket.bbox_vbo = nullptr;
         }
     }
 
@@ -330,10 +330,10 @@ static void rebuild_cave_opengl_data()
         {
             if (!current->points.empty())
             {
-                current->vbo = opengl_buffer_create_buffer(std_vector_size(current->points), GL_DYNAMIC_STORAGE_BIT, current->points.data());
-                current->vao = opengl_vertex_array_create_vertex_array(current->vbo, true, UINT32_MAX, 0, layout_normal_point);
+                current->vbo = new Buffer(GL_DYNAMIC_STORAGE_BIT, std_vector_size(current->points), current->points.data());
+                current->vao = opengl_vertex_array_create_vertex_array(current->vbo->GetID(), true, UINT32_MAX, 0, layout_normal_point);
 
-                spdlog::debug("Created LOD [{}] VAO [{}] and VBO [{}] for ID = [{} {} {}]", lod_level, current->vao, current->vbo, ID.x, ID.y, ID.z);
+                spdlog::debug("Created LOD [{}] VAO [{}] and VBO [{}] for ID = [{} {} {}]", lod_level, current->vao, current->vbo->GetID(), ID.x, ID.y, ID.z);
             }
 
             current = current->next;
@@ -371,8 +371,8 @@ static void rebuild_cave_opengl_data()
             {{min.x, max.y, min.z}},
             {{min.x, max.y, max.z}}};
 
-        bucket.bbox_vbo = opengl_buffer_create_buffer(std_vector_size(box_vertices), GL_NONE, box_vertices.data());
-        bucket.bbox_vao = opengl_vertex_array_create_vertex_array(bucket.bbox_vbo, true, UINT32_MAX, false, layout_point);
+        bucket.bbox_vbo = new Buffer(GL_NONE, std_vector_size(box_vertices), box_vertices.data());
+        bucket.bbox_vao = opengl_vertex_array_create_vertex_array(bucket.bbox_vbo->GetID(), true, UINT32_MAX, false, layout_point);
     }
 }
 
@@ -609,11 +609,11 @@ int main()
     const std::vector<VertexBufferAttributeLayout> layout_color_point = opengl_vertex_array_get_vertex_layout<ColorPoint>();
     const std::vector<VertexBufferAttributeLayout> layout_point       = opengl_vertex_array_get_vertex_layout<Point>();
 
-    uint32_t origin_buffer = opengl_buffer_create_buffer(std_vector_size(origin), GL_DYNAMIC_STORAGE_BIT, origin.data());
-    uint32_t origin_vao    = opengl_vertex_array_create_vertex_array(origin_buffer, true, UINT32_MAX, false, layout_color_point);
+    Buffer*  origin_buffer = new Buffer(GL_DYNAMIC_STORAGE_BIT, std_vector_size(origin), origin.data());
+    uint32_t origin_vao    = opengl_vertex_array_create_vertex_array(origin_buffer->GetID(), true, UINT32_MAX, false, layout_color_point);
 
-    uint32_t target_buffer = opengl_buffer_create_buffer(std_vector_size(target), GL_DYNAMIC_STORAGE_BIT, target.data());
-    uint32_t target_vao    = opengl_vertex_array_create_vertex_array(target_buffer, true, UINT32_MAX, false, layout_point);
+    Buffer*  target_buffer = new Buffer(GL_DYNAMIC_STORAGE_BIT, std_vector_size(target), target.data());
+    uint32_t target_vao    = opengl_vertex_array_create_vertex_array(target_buffer->GetID(), true, UINT32_MAX, false, layout_point);
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -1026,7 +1026,7 @@ int main()
                 g_trajectory_positions[g_trajectory_index].position             = position;
                 g_trajectory_orientations_mat33[g_trajectory_index].orientation = rotation;
 
-                glNamedBufferSubData(g_trajectory_positions_vbo, sizeof(glm::vec3) * g_trajectory_index, sizeof(glm::vec3), &g_trajectory_positions[g_trajectory_index].position);
+                glNamedBufferSubData(g_trajectory_positions_vbo->GetID(), sizeof(glm::vec3) * g_trajectory_index, sizeof(glm::vec3), &g_trajectory_positions[g_trajectory_index].position);
             }
         }
 
