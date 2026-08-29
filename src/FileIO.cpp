@@ -178,28 +178,6 @@ bool load_trajectory_bin_mat33(const std::filesystem::path& path, std::vector<Po
     return false;
 }
 
-bool save_trajectory_bin_mat33(const std::filesystem::path& path, const std::vector<Point>& trajectory_pose_positions, const std::vector<TrajectoryPoseOrientationMat33>& trajectory_pose_orientations)
-{
-    if (std::ofstream file = std::ofstream(path, std::ios::out | std::ios::binary))
-    {
-        const uint32_t trajectory_length = static_cast<uint32_t>(trajectory_pose_positions.size());
-
-        const size_t positions_size          = trajectory_length * sizeof(Point);
-        const size_t orientations_mat33_size = trajectory_length * sizeof(TrajectoryPoseOrientationMat33);
-
-        const Point* const                          positions          = trajectory_pose_positions.data();
-        const TrajectoryPoseOrientationMat33* const orientations_mat33 = trajectory_pose_orientations.data();
-
-        file.write(reinterpret_cast<const char* const>(&trajectory_length), sizeof(uint32_t));
-        file.write(reinterpret_cast<const char* const>(positions), positions_size);
-        file.write(reinterpret_cast<const char* const>(orientations_mat33), orientations_mat33_size);
-
-        return true;
-    }
-
-    return false;
-}
-
 bool load_stretcher_ply(const std::filesystem::path& path, std::vector<ColorPoint>& points, std::vector<uint32_t>& indices)
 {
     points  = {};
@@ -296,27 +274,6 @@ bool load_stretcher_bin(const std::filesystem::path& path, std::vector<ColorPoin
     return false;
 }
 
-bool save_stretcher_bin(const std::filesystem::path& path, const std::vector<ColorPoint>& points, const std::vector<uint32_t>& indices)
-{
-    if (std::ofstream file = std::ofstream(path, std::ios::out | std::ios::binary))
-    {
-        const uint32_t stretcher_vertices_count = points.size();
-        const uint32_t stretcher_indices_count  = indices.size();
-
-        const ColorPoint* const stretcher_vertices = points.data();
-        const uint32_t* const   stretcher_indices  = indices.data();
-
-        file.write(reinterpret_cast<const char* const>(&stretcher_vertices_count), sizeof(uint32_t));
-        file.write(reinterpret_cast<const char* const>(&stretcher_indices_count), sizeof(uint32_t));
-        file.write(reinterpret_cast<const char* const>(stretcher_vertices), stretcher_vertices_count * sizeof(ColorPoint));
-        file.write(reinterpret_cast<const char* const>(stretcher_indices), stretcher_indices_count * sizeof(uint32_t));
-
-        return true;
-    }
-
-    return false;
-}
-
 bool load_cave_ply(const std::filesystem::path& path, std::vector<NormalPoint>& points)
 {
     points = {};
@@ -376,22 +333,6 @@ bool load_cave_bin(const std::filesystem::path& path, std::vector<NormalPoint>& 
 
         points.resize(vertices_count);
         file.read(reinterpret_cast<char*>(points.data()), vertices_count * sizeof(NormalPoint));
-
-        return true;
-    }
-
-    return false;
-}
-
-bool save_cave_bin(const std::filesystem::path& path, const std::vector<NormalPoint>& points)
-{
-    if (std::ofstream file = std::ofstream(path, std::ios::out | std::ios::binary))
-    {
-        const uint32_t           vertices_count = points.size();
-        const NormalPoint* const vertices       = points.data();
-
-        file.write(reinterpret_cast<const char* const>(&vertices_count), sizeof(uint32_t));
-        file.write(reinterpret_cast<const char* const>(vertices), vertices_count * sizeof(NormalPoint));
 
         return true;
     }

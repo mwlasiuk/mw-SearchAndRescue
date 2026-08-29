@@ -130,6 +130,30 @@ static uint32_t g_trajectory_index                     = 0;
 // gizmo
 static bool g_modify_current_pose_with_gizmo = false;
 
+static inline bool open_single_file_with_pfd(const std::string& title, const std::string& filter_description, const std::string& filter, std::string& out)
+{
+    const std::vector<std::string> result = pfd::open_file(
+                                                title,
+                                                "",
+                                                {filter_description, filter})
+                                                .result();
+
+    if (result.empty())
+    {
+        spdlog::error("PFD result emplty - doing nothing ...");
+        return false;
+    }
+
+    if (result.size() > 1)
+    {
+        spdlog::warn("PFD result contains multiple entiries - loading first ...");
+    }
+
+    out = result.front();
+
+    return true;
+}
+
 template <typename T>
 static size_t std_vector_size(const std::vector<T>& vector)
 {
@@ -354,203 +378,68 @@ static void rebuild_cave_opengl_data()
 
 static inline void load_trajectory()
 {
-    const std::vector<std::string> result = pfd::open_file(
-                                                "Open CSV file",
-                                                "",
-                                                {"CSV Files (.csv)", "*.csv", "All Files", "*"})
-                                                .result();
+    std::string filename;
 
-    if (result.empty())
+    if (open_single_file_with_pfd("Open CSV file", "CSV Files (.csv)", "*.csv", filename))
     {
-        spdlog::info("PFD result emplty - doing nothing ...");
-        return;
+        CHECK_BOOL(load_trajectory_csv_mat33(filename, g_trajectory_positions, g_trajectory_orientations_mat33, g_load_csv_every_nth));
+        rebuild_trajectory_mat33_opengl_data();
     }
-
-    if (result.size() > 1)
-    {
-        spdlog::info("PFD result contains multiple entiries - loading first ...");
-    }
-
-    const std::string& filename = result.front();
-
-    CHECK_BOOL(load_trajectory_csv_mat33(filename, g_trajectory_positions, g_trajectory_orientations_mat33, g_load_csv_every_nth));
-    rebuild_trajectory_mat33_opengl_data();
 }
 
 static inline void load_trajectory_bin()
 {
-    const std::vector<std::string> result = pfd::open_file(
-                                                "Load trajectory (MAT33) - BINARY",
-                                                "",
-                                                {"Binary files", "*.bin"})
-                                                .result();
+    std::string filename;
 
-    if (result.empty())
+    if (open_single_file_with_pfd("Load trajectory (MAT33) - BINARY", "Binary files", "*.bin", filename))
     {
-        spdlog::info("PFD result emplty - doing nothing ...");
-        return;
+        CHECK_BOOL(load_trajectory_bin_mat33(filename, g_trajectory_positions, g_trajectory_orientations_mat33, g_load_csv_every_nth));
+        rebuild_trajectory_mat33_opengl_data();
     }
-
-    if (result.size() > 1)
-    {
-        spdlog::info("PFD result contains multiple entiries - loading first ...");
-    }
-
-    const std::string& filename = result.front();
-
-    CHECK_BOOL(load_trajectory_bin_mat33(filename, g_trajectory_positions, g_trajectory_orientations_mat33, g_load_csv_every_nth));
-    rebuild_trajectory_mat33_opengl_data();
-}
-
-static inline void save_trajectory_bin()
-{
-    std::string filename = pfd::save_file(
-                               "Save trajectory (MAT33) - BINARY",
-                               "",
-                               {"Binary files", "*.bin"})
-                               .result();
-
-    if (filename.empty())
-    {
-        spdlog::info("PFD result emplty - doing nothing ...");
-        return;
-    }
-
-    CHECK_BOOL(save_trajectory_bin_mat33(filename, g_trajectory_positions, g_trajectory_orientations_mat33));
 }
 
 static inline void load_object()
 {
-    const std::vector<std::string> result = pfd::open_file(
-                                                "Open PLY file",
-                                                "",
-                                                {"PLY Files (.ply)", "*.ply", "All Files", "*"})
-                                                .result();
+    std::string filename;
 
-    if (result.empty())
+    if (open_single_file_with_pfd("Open PLY file", "PLY Files (.ply)", "*.ply", filename))
     {
-        spdlog::info("PFD result emplty - doing nothing ...");
-        return;
+        CHECK_BOOL(load_stretcher_ply(filename, g_stretcher_vertices, g_stretcher_indices));
+        rebuild_stretcher_opengl_data();
     }
-
-    if (result.size() > 1)
-    {
-        spdlog::info("PFD result contains multiple entiries - loading first ...");
-    }
-
-    const std::string& filename = result.front();
-
-    CHECK_BOOL(load_stretcher_ply(filename, g_stretcher_vertices, g_stretcher_indices));
-    rebuild_stretcher_opengl_data();
 }
 
 static inline void load_object_bin()
 {
-    const std::vector<std::string> result = pfd::open_file(
-                                                "Open PLY file - BIN",
-                                                "",
-                                                {"PLY Files (.bin)", "*.bin"})
-                                                .result();
+    std::string filename;
 
-    if (result.empty())
+    if (open_single_file_with_pfd("Open PLY file - BIN", "PLY Files (.bin)", "*.bin", filename))
     {
-        spdlog::info("PFD result emplty - doing nothing ...");
-        return;
+        CHECK_BOOL(load_stretcher_bin(filename, g_stretcher_vertices, g_stretcher_indices));
+        rebuild_stretcher_opengl_data();
     }
-
-    if (result.size() > 1)
-    {
-        spdlog::info("PFD result contains multiple entiries - loading first ...");
-    }
-
-    const std::string& filename = result.front();
-
-    CHECK_BOOL(load_stretcher_bin(filename, g_stretcher_vertices, g_stretcher_indices));
-    rebuild_stretcher_opengl_data();
-}
-
-static inline void save_object_bin()
-{
-    std::string filename = pfd::save_file(
-                               "Save object - BINARY",
-                               "",
-                               {"Binary files", "*.bin"})
-                               .result();
-
-    if (filename.empty())
-    {
-        spdlog::info("PFD result emplty - doing nothing ...");
-        return;
-    }
-
-    CHECK_BOOL(save_stretcher_bin(filename, g_stretcher_vertices, g_stretcher_indices));
 }
 
 static inline void load_environment()
 {
-    const std::vector<std::string> result = pfd::open_file(
-                                                "Open PLY file",
-                                                "",
-                                                {"PLY Files (.ply)", "*.ply", "All Files", "*"})
-                                                .result();
+    std::string filename;
 
-    if (result.empty())
+    if (open_single_file_with_pfd("Open PLY file", "PLY Files (.ply)", "*.ply", filename))
     {
-        spdlog::info("PFD result empty - doing nothing ...");
-        return;
+        CHECK_BOOL(load_cave_ply(filename, g_cave_vertices));
+        rebuild_cave_opengl_data();
     }
-
-    if (result.size() > 1)
-    {
-        spdlog::info("PFD result contains multiple entries - loading first ...");
-    }
-
-    const std::string& filename = result.front();
-
-    CHECK_BOOL(load_cave_ply(filename, g_cave_vertices));
-    rebuild_cave_opengl_data();
 }
 
 static inline void load_environment_bin()
 {
-    const std::vector<std::string> result = pfd::open_file(
-                                                "Open environment PLY file - BIN",
-                                                "",
-                                                {"PLY Files (.bin)", "*.bin"})
-                                                .result();
+    std::string filename;
 
-    if (result.empty())
+    if (open_single_file_with_pfd("Open environment PLY file - BIN", "PLY Files (.bin)", "*.bin", filename))
     {
-        spdlog::info("PFD result emplty - doing nothing ...");
-        return;
+        CHECK_BOOL(load_cave_bin(filename, g_cave_vertices));
+        rebuild_cave_opengl_data();
     }
-
-    if (result.size() > 1)
-    {
-        spdlog::info("PFD result contains multiple entiries - loading first ...");
-    }
-
-    const std::string& filename = result.front();
-
-    CHECK_BOOL(load_cave_bin(filename, g_cave_vertices));
-    rebuild_cave_opengl_data();
-}
-
-static inline void save_environment_bin()
-{
-    std::string filename = pfd::save_file(
-                               "Save environment - BINARY",
-                               "",
-                               {"Binary files", "*.bin"})
-                               .result();
-
-    if (filename.empty())
-    {
-        spdlog::info("PFD result emplty - doing nothing ...");
-        return;
-    }
-
-    CHECK_BOOL(save_cave_bin(filename, g_cave_vertices));
 }
 
 int main()
@@ -822,13 +711,11 @@ int main()
             ImGui::Separator();
             if (ImGui::TreeNode("File input / output"))
             {
-                if (ImGui::BeginTable("IOGrid", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchSame))
+                if (ImGui::BeginTable("IOGrid", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchSame))
                 {
                     ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 120.0f);
                     ImGui::TableSetupColumn("Read", ImGuiTableColumnFlags_WidthStretch);
                     ImGui::TableSetupColumn("Read Binary", ImGuiTableColumnFlags_WidthStretch);
-                    ImGui::TableSetupColumn("Save Binary", ImGuiTableColumnFlags_WidthStretch);
-                    ImGui::TableSetupColumn("LAS/LAZ", ImGuiTableColumnFlags_WidthStretch);
                     ImGui::TableHeadersRow();
 
                     // Trajectory
@@ -849,15 +736,6 @@ int main()
                         load_trajectory_bin();
                     }
 
-                    ImGui::TableSetColumnIndex(3);
-                    if (ImGui::Button("##traj_save_bin", ImVec2(-FLT_MIN, 0)))
-                    {
-                        save_trajectory_bin();
-                    }
-
-                    ImGui::TableSetColumnIndex(4);
-                    ImGui::Text("");
-
                     // Object
                     ImGui::TableNextRow();
 
@@ -876,15 +754,6 @@ int main()
                         load_object_bin();
                     }
 
-                    ImGui::TableSetColumnIndex(3);
-                    if (ImGui::Button("##obj_save_bin", ImVec2(-FLT_MIN, 0)))
-                    {
-                        save_object_bin();
-                    }
-
-                    ImGui::TableSetColumnIndex(4);
-                    ImGui::Text("");
-
                     // Environment
                     ImGui::TableNextRow();
 
@@ -902,14 +771,6 @@ int main()
                     {
                         load_environment_bin();
                     }
-
-                    ImGui::TableSetColumnIndex(3);
-                    if (ImGui::Button("##env_save_bin", ImVec2(-FLT_MIN, 0)))
-                    {
-                        save_environment_bin();
-                    }
-
-                    ImGui::TableSetColumnIndex(4);
 
                     ImGui::EndTable();
                 }
