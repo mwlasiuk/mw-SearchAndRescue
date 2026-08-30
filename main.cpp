@@ -442,6 +442,25 @@ static inline void load_environment_bin()
     }
 }
 
+static inline Program* make_program(const std::string& file, const std::string& directory = "assets")
+{
+    std::vector<char> vertex_shader_source   = {};
+    std::vector<char> fragment_shader_source = {};
+
+    CHECK_BOOL(load_text_file(vertex_shader_source, std::filesystem::path(directory).append(file + ".vert")));
+    CHECK_BOOL(load_text_file(fragment_shader_source, std::filesystem::path(directory).append(file + ".frag")));
+
+    return new Program(
+        {ShaderDescriptor{
+             .shader_type = GL_VERTEX_SHADER,
+             .source_size = (int32_t)vertex_shader_source.size(),
+             .source      = vertex_shader_source.data()},
+         ShaderDescriptor{
+             .shader_type = GL_FRAGMENT_SHADER,
+             .source_size = (int32_t)fragment_shader_source.size(),
+             .source      = fragment_shader_source.data()}});
+}
+
 int main()
 {
     std::vector<ColorPoint> origin = {
@@ -459,48 +478,6 @@ int main()
         {{0.0f, 1.0f, 0.0f}},
         {{0.0f, 0.0f, -1.0f}},
         {{0.0f, 0.0f, 1.0f}}};
-
-    std::vector<char> origin_vertex_shader_source   = {};
-    std::vector<char> origin_fragment_shader_source = {};
-
-    std::vector<char> camera_target_vertex_shader_source   = {};
-    std::vector<char> camera_target_fragment_shader_source = {};
-
-    std::vector<char> point_cloud_vertex_shader_source   = {};
-    std::vector<char> point_cloud_fragment_shader_source = {};
-
-    std::vector<char> trajectory_vertex_shader_source   = {};
-    std::vector<char> trajectory_fragment_shader_source = {};
-
-    std::vector<char> stretcher_vertex_shader_source   = {};
-    std::vector<char> stretcher_fragment_shader_source = {};
-
-    std::vector<char> bounding_box_vertex_shader_source   = {};
-    std::vector<char> bounding_box_fragment_shader_source = {};
-
-    std::vector<char> bounding_box_stretcher_vertex_shader_source   = {};
-    std::vector<char> bounding_box_stretcher_fragment_shader_source = {};
-
-    CHECK_BOOL(load_text_file(origin_vertex_shader_source, std::filesystem::path("assets").append("origin.vert")));
-    CHECK_BOOL(load_text_file(origin_fragment_shader_source, std::filesystem::path("assets").append("origin.frag")));
-
-    CHECK_BOOL(load_text_file(camera_target_vertex_shader_source, std::filesystem::path("assets").append("camera_target.vert")));
-    CHECK_BOOL(load_text_file(camera_target_fragment_shader_source, std::filesystem::path("assets").append("camera_target.frag")));
-
-    CHECK_BOOL(load_text_file(point_cloud_vertex_shader_source, std::filesystem::path("assets").append("point_cloud.vert")));
-    CHECK_BOOL(load_text_file(point_cloud_fragment_shader_source, std::filesystem::path("assets").append("point_cloud.frag")));
-
-    CHECK_BOOL(load_text_file(trajectory_vertex_shader_source, std::filesystem::path("assets").append("trajectory.vert")));
-    CHECK_BOOL(load_text_file(trajectory_fragment_shader_source, std::filesystem::path("assets").append("trajectory.frag")));
-
-    CHECK_BOOL(load_text_file(stretcher_vertex_shader_source, std::filesystem::path("assets").append("stretcher.vert")));
-    CHECK_BOOL(load_text_file(stretcher_fragment_shader_source, std::filesystem::path("assets").append("stretcher.frag")));
-
-    CHECK_BOOL(load_text_file(bounding_box_vertex_shader_source, std::filesystem::path("assets").append("bounding_box.vert")));
-    CHECK_BOOL(load_text_file(bounding_box_fragment_shader_source, std::filesystem::path("assets").append("bounding_box.frag")));
-
-    CHECK_BOOL(load_text_file(bounding_box_stretcher_vertex_shader_source, std::filesystem::path("assets").append("bounding_box_stretcher.vert")));
-    CHECK_BOOL(load_text_file(bounding_box_stretcher_fragment_shader_source, std::filesystem::path("assets").append("bounding_box_stretcher.frag")));
 
     glfwSetErrorCallback(ErrorCallback::GLFW);
     glfwInit();
@@ -536,75 +513,13 @@ int main()
     glEnable(GL_PROGRAM_POINT_SIZE);
     glEnable(GL_DEPTH_TEST);
 
-    Program* origin_program = new Program(
-        {ShaderDescriptor{
-             .shader_type = GL_VERTEX_SHADER,
-             .source_size = (int32_t)origin_vertex_shader_source.size(),
-             .source      = origin_vertex_shader_source.data()},
-         ShaderDescriptor{
-             .shader_type = GL_FRAGMENT_SHADER,
-             .source_size = (int32_t)origin_fragment_shader_source.size(),
-             .source      = origin_fragment_shader_source.data()}});
-
-    Program* camera_target_program = new Program(
-        {ShaderDescriptor{
-             .shader_type = GL_VERTEX_SHADER,
-             .source_size = (int32_t)camera_target_vertex_shader_source.size(),
-             .source      = camera_target_vertex_shader_source.data()},
-         ShaderDescriptor{
-             .shader_type = GL_FRAGMENT_SHADER,
-             .source_size = (int32_t)camera_target_fragment_shader_source.size(),
-             .source      = camera_target_fragment_shader_source.data()}});
-
-    Program* point_cloud_program = new Program(
-        {ShaderDescriptor{
-             .shader_type = GL_VERTEX_SHADER,
-             .source_size = (int32_t)point_cloud_vertex_shader_source.size(),
-             .source      = point_cloud_vertex_shader_source.data()},
-         ShaderDescriptor{
-             .shader_type = GL_FRAGMENT_SHADER,
-             .source_size = (int32_t)point_cloud_fragment_shader_source.size(),
-             .source      = point_cloud_fragment_shader_source.data()}});
-
-    Program* trajectory_program = new Program(
-        {ShaderDescriptor{
-             .shader_type = GL_VERTEX_SHADER,
-             .source_size = (int32_t)trajectory_vertex_shader_source.size(),
-             .source      = trajectory_vertex_shader_source.data()},
-         ShaderDescriptor{
-             .shader_type = GL_FRAGMENT_SHADER,
-             .source_size = (int32_t)trajectory_fragment_shader_source.size(),
-             .source      = trajectory_fragment_shader_source.data()}});
-
-    Program* stretcher_program = new Program(
-        {ShaderDescriptor{
-             .shader_type = GL_VERTEX_SHADER,
-             .source_size = (int32_t)stretcher_vertex_shader_source.size(),
-             .source      = stretcher_vertex_shader_source.data()},
-         ShaderDescriptor{
-             .shader_type = GL_FRAGMENT_SHADER,
-             .source_size = (int32_t)stretcher_fragment_shader_source.size(),
-             .source      = stretcher_fragment_shader_source.data()}});
-
-    Program* bounding_box_program = new Program(
-        {ShaderDescriptor{
-             .shader_type = GL_VERTEX_SHADER,
-             .source_size = (int32_t)bounding_box_vertex_shader_source.size(),
-             .source      = bounding_box_vertex_shader_source.data()},
-         ShaderDescriptor{
-             .shader_type = GL_FRAGMENT_SHADER,
-             .source_size = (int32_t)bounding_box_fragment_shader_source.size(),
-             .source      = bounding_box_fragment_shader_source.data()}});
-
-    Program* bounding_box_stretcher_program = new Program(
-        {ShaderDescriptor{
-             .shader_type = GL_VERTEX_SHADER,
-             .source_size = (int32_t)bounding_box_stretcher_vertex_shader_source.size(),
-             .source      = bounding_box_stretcher_vertex_shader_source.data()},
-         ShaderDescriptor{
-             .shader_type = GL_FRAGMENT_SHADER,
-             .source_size = (int32_t)bounding_box_stretcher_fragment_shader_source.size(),
-             .source      = bounding_box_stretcher_fragment_shader_source.data()}});
+    Program* origin_program                 = make_program("origin");
+    Program* camera_target_program          = make_program("camera_target");
+    Program* point_cloud_program            = make_program("point_cloud");
+    Program* trajectory_program             = make_program("trajectory");
+    Program* stretcher_program              = make_program("stretcher");
+    Program* bounding_box_program           = make_program("bounding_box");
+    Program* bounding_box_stretcher_program = make_program("bounding_box_stretcher");
 
     const std::vector<VertexBufferAttributeLayout> layout_color_point = opengl_vertex_array_get_vertex_layout<ColorPoint>();
     const std::vector<VertexBufferAttributeLayout> layout_point       = opengl_vertex_array_get_vertex_layout<Point>();

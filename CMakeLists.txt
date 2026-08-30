@@ -55,6 +55,7 @@ target_sources(cave-traversal-tool
         src/Processing.cpp
         src/Program.cpp
         src/VertexArray.cpp
+        src/Shaders.cpp
     PRIVATE
         external/glad/src/glad.c
         external/imgui/imgui_demo.cpp
