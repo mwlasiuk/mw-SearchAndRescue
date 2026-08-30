@@ -26,6 +26,8 @@
 
 #include <cave-traversal-tool/Processing.h>
 
+#include <cave-traversal-tool/Shaders.h>
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -442,23 +444,17 @@ static inline void load_environment_bin()
     }
 }
 
-static inline Program* make_program(const std::string& file, const std::string& directory = "assets")
+static inline Program* make_program(const ProgramShaderSources& sources)
 {
-    std::vector<char> vertex_shader_source   = {};
-    std::vector<char> fragment_shader_source = {};
-
-    CHECK_BOOL(load_text_file(vertex_shader_source, std::filesystem::path(directory).append(file + ".vert")));
-    CHECK_BOOL(load_text_file(fragment_shader_source, std::filesystem::path(directory).append(file + ".frag")));
-
     return new Program(
         {ShaderDescriptor{
              .shader_type = GL_VERTEX_SHADER,
-             .source_size = (int32_t)vertex_shader_source.size(),
-             .source      = vertex_shader_source.data()},
+             .source_size = sources.vertex_source_size,
+             .source      = sources.vertex_source},
          ShaderDescriptor{
              .shader_type = GL_FRAGMENT_SHADER,
-             .source_size = (int32_t)fragment_shader_source.size(),
-             .source      = fragment_shader_source.data()}});
+             .source_size = sources.fragment_source_size,
+             .source      = sources.fragment_source}});
 }
 
 int main()
@@ -513,13 +509,13 @@ int main()
     glEnable(GL_PROGRAM_POINT_SIZE);
     glEnable(GL_DEPTH_TEST);
 
-    Program* origin_program                 = make_program("origin");
-    Program* camera_target_program          = make_program("camera_target");
-    Program* point_cloud_program            = make_program("point_cloud");
-    Program* trajectory_program             = make_program("trajectory");
-    Program* stretcher_program              = make_program("stretcher");
-    Program* bounding_box_program           = make_program("bounding_box");
-    Program* bounding_box_stretcher_program = make_program("bounding_box_stretcher");
+    Program* origin_program                 = make_program(GetProgramShaderSources_Origin());
+    Program* camera_target_program          = make_program(GetProgramShaderSources_CameraTarger());
+    Program* point_cloud_program            = make_program(GetProgramShaderSources_PointCloud());
+    Program* trajectory_program             = make_program(GetProgramShaderSources_Trajectory());
+    Program* stretcher_program              = make_program(GetProgramShaderSources_Stretcher());
+    Program* bounding_box_program           = make_program(GetProgramShaderSources_BoundingBox());
+    Program* bounding_box_stretcher_program = make_program(GetProgramShaderSources_BoundingBoxStretcher());
 
     const std::vector<VertexBufferAttributeLayout> layout_color_point = opengl_vertex_array_get_vertex_layout<ColorPoint>();
     const std::vector<VertexBufferAttributeLayout> layout_point       = opengl_vertex_array_get_vertex_layout<Point>();
