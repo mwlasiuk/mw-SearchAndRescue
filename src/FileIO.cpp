@@ -1,6 +1,8 @@
 #include <cave-traversal-tool/FileIO.h>
 
 #include <happly.h>
+#include <laszip_api.h>
+#include <limits>
 #include <spdlog/spdlog.h>
 
 bool load_text_file(std::vector<char>& output, const std::filesystem::path& path)
@@ -246,68 +248,81 @@ bool load_stretcher_ply(const std::filesystem::path& path, std::vector<ColorPoin
     return true;
 }
 
-bool load_cave_ply(const std::filesystem::path& path, std::vector<NormalPoint>& points)
+bool load_cave_laz(const std::filesystem::path& path, std::vector<PointIntensity>& points)
 {
-    points = {};
-
-    happly::PLYData ply(path.string());
-
-    if (!ply.hasElement("vertex") || ply.getVertexPositions().empty())
-    {
-        spdlog::error("PLY file {} has no vertex positions!", path.string());
-        return false;
-    }
-
-    const auto& vertexNames = ply.getElement("vertex").getPropertyNames();
-    if (!(std::count(vertexNames.begin(), vertexNames.end(), "nx") &&
-          std::count(vertexNames.begin(), vertexNames.end(), "ny") &&
-          std::count(vertexNames.begin(), vertexNames.end(), "nz")))
-    {
-        spdlog::error("PLY file {} has no vertex normals!", path.string());
-        return false;
-    }
-
-    const auto positions = ply.getVertexPositions();
-
-    const auto nx = ply.getElement("vertex").getProperty<float>("nx");
-    const auto ny = ply.getElement("vertex").getProperty<float>("ny");
-    const auto nz = ply.getElement("vertex").getProperty<float>("nz");
-
     points.clear();
-    points.reserve(positions.size());
 
-    for (size_t i = 0; i < positions.size(); i++)
+    laszip_POINTER laszip_reader = nullptr;
+    if (laszip_create(&laszip_reader))
     {
-        NormalPoint pt;
+        spdlog::error("Failed to create LASzip reader");
+        return false;
+    }
 
-        pt.position.x = static_cast<float>(positions[i][0]);
-        pt.position.y = static_cast<float>(positions[i][1]);
-        pt.position.z = static_cast<float>(positions[i][2]);
+    laszip_BOOL is_compressed = 0;
+    if (laszip_open_reader(laszip_reader, path.string().c_str(), &is_compressed))
+    {
+        laszip_CHAR* error_msg = nullptr;
+        laszip_get_error(laszip_reader, &error_msg);
+        spdlog::error("Failed to open LAZ/LAS file: {} - {}", path.string(), error_msg ? error_msg : "Unknown error");
+        laszip_destroy(laszip_reader);
+        return false;
+    }
 
-        pt.normal.x = nx[i];
-        pt.normal.y = ny[i];
-        pt.normal.z = nz[i];
+    laszip_header_struct* header = nullptr;
+    if (laszip_get_header_pointer(laszip_reader, &header))
+    {
+        spdlog::error("Failed to get LASzip header pointer");
+        laszip_close_reader(laszip_reader);
+        laszip_destroy(laszip_reader);
+        return false;
+    }
+
+    laszip_I64 num_points = (header->number_of_point_records ? header->number_of_point_records : header->extended_number_of_point_records);
+
+    laszip_point_struct* point = nullptr;
+    if (laszip_get_point_pointer(laszip_reader, &point))
+    {
+        spdlog::error("Failed to get LASzip point pointer");
+        laszip_close_reader(laszip_reader);
+        laszip_destroy(laszip_reader);
+        return false;
+    }
+
+    spdlog::info("Loading LAZ file '{}': {} points (compressed: {})", path.string(), num_points, is_compressed ? "yes" : "no");
+
+    points.reserve(static_cast<size_t>(num_points));
+
+    const double x_scale  = header->x_scale_factor;
+    const double y_scale  = header->y_scale_factor;
+    const double z_scale  = header->z_scale_factor;
+    const double x_offset = header->x_offset;
+    const double y_offset = header->y_offset;
+    const double z_offset = header->z_offset;
+
+    for (laszip_I64 i = 0; i < num_points; ++i)
+    {
+        if (laszip_read_point(laszip_reader))
+        {
+            spdlog::error("Failed to read point at index {}", i);
+            break;
+        }
+
+        const uint8_t intensity = static_cast<uint8_t>(point->intensity);
+
+        PointIntensity pt{};
+        pt.position.x = static_cast<float>(point->X * x_scale + x_offset);
+        pt.position.y = static_cast<float>(point->Y * y_scale + y_offset);
+        pt.position.z = static_cast<float>(point->Z * z_scale + z_offset);
+        pt.intensity  = float(intensity) / 255.0f;
 
         points.push_back(pt);
     }
 
-    return true;
-}
+    laszip_close_reader(laszip_reader);
+    laszip_destroy(laszip_reader);
 
-bool load_cave_bin(const std::filesystem::path& path, std::vector<NormalPoint>& points)
-{
-    points = {};
+    spdlog::info("Loaded {} points from LAZ file", points.size());
 
-    if (std::ifstream file = std::ifstream(path, std::ios::in | std::ios::binary))
-    {
-        uint32_t vertices_count = 0;
-        file.read(reinterpret_cast<char*>(&vertices_count), sizeof(uint32_t));
-
-        points.resize(vertices_count);
-        file.read(reinterpret_cast<char*>(points.data()), vertices_count * sizeof(NormalPoint));
-
-        return true;
-    }
-
-    return false;
+    return !points.empty();
 }

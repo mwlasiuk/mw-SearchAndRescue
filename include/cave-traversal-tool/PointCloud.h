@@ -7,7 +7,7 @@
 
 struct PointCloudLOD
 {
-    std::vector<NormalPoint> points;
+    std::vector<PointIntensity> points;
 
     glm::vec3 min = {};
     glm::vec3 max = {};

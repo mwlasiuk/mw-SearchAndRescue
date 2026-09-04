@@ -49,7 +49,7 @@
         }                                                         \
     } while (0)
 
-static std::vector<NormalPoint> g_cave_vertices{};
+static std::vector<PointIntensity> g_cave_vertices{};
 static PointCloudBucket         g_buckets{};
 
 static Buffer*      g_stretcher_aabb_vbo = nullptr;
@@ -272,8 +272,8 @@ static void rebuild_stretcher_opengl_data()
 
 static void rebuild_cave_opengl_data()
 {
-    const std::vector<VertexBufferAttributeLayout> layout_normal_point = opengl_vertex_array_get_vertex_layout<NormalPoint>();
-    const std::vector<VertexBufferAttributeLayout> layout_point        = opengl_vertex_array_get_vertex_layout<Point>();
+    const std::vector<VertexBufferAttributeLayout> layout_point_intensity = opengl_vertex_array_get_vertex_layout<PointIntensity>();
+    const std::vector<VertexBufferAttributeLayout> layout_point           = opengl_vertex_array_get_vertex_layout<Point>();
 
     // Clear old data
     for (auto& [ID, bucket] : g_buckets)
@@ -332,7 +332,7 @@ static void rebuild_cave_opengl_data()
             if (!current->points.empty())
             {
                 current->vbo = new Buffer(GL_DYNAMIC_STORAGE_BIT, std_vector_size(current->points), current->points.data());
-                current->vao = new VertexArray(current->vbo, false, nullptr, false, layout_normal_point);
+                current->vao = new VertexArray(current->vbo, false, nullptr, false, layout_point_intensity);
 
                 spdlog::debug("Created LOD [{}] VAO [{}] and VBO [{}] for ID = [{} {} {}]", lod_level, current->vao->GetID(), current->vbo->GetID(), ID.x, ID.y, ID.z);
             }
@@ -414,20 +414,9 @@ static inline void load_environment()
 {
     std::string filename;
 
-    if (open_single_file_with_pfd("Open PLY file", "PLY Files (.ply)", "*.ply", filename))
+    if (open_single_file_with_pfd("Open LAZ file", "LAZ Files (*.laz *.las)", "*.laz *.las", filename))
     {
-        CHECK_BOOL(load_cave_ply(filename, g_cave_vertices));
-        rebuild_cave_opengl_data();
-    }
-}
-
-static inline void load_environment_bin()
-{
-    std::string filename;
-
-    if (open_single_file_with_pfd("Open environment PLY file - BIN", "PLY Files (.bin)", "*.bin", filename))
-    {
-        CHECK_BOOL(load_cave_bin(filename, g_cave_vertices));
+        CHECK_BOOL(load_cave_laz(filename, g_cave_vertices));
         rebuild_cave_opengl_data();
     }
 }
@@ -663,10 +652,7 @@ int main()
                     }
 
                     ImGui::TableSetColumnIndex(2);
-                    if (ImGui::Button("##env_read_bin", ImVec2(-FLT_MIN, 0)))
-                    {
-                        load_environment_bin();
-                    }
+                    ImGui::TextDisabled("-");
 
                     ImGui::EndTable();
                 }
