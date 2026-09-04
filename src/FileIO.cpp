@@ -246,34 +246,6 @@ bool load_stretcher_ply(const std::filesystem::path& path, std::vector<ColorPoin
     return true;
 }
 
-bool load_stretcher_bin(const std::filesystem::path& path, std::vector<ColorPoint>& points, std::vector<uint32_t>& indices)
-{
-    points  = {};
-    indices = {};
-
-    if (std::ifstream file = std::ifstream(path, std::ios::in | std::ios::binary))
-    {
-        points  = {};
-        indices = {};
-
-        uint32_t vertices_count = 0;
-        uint32_t indices_count  = 0;
-
-        file.read(reinterpret_cast<char*>(&vertices_count), sizeof(uint32_t));
-        file.read(reinterpret_cast<char*>(&indices_count), sizeof(uint32_t));
-
-        points.resize(vertices_count);
-        indices.resize(indices_count);
-
-        file.read(reinterpret_cast<char*>(points.data()), vertices_count * sizeof(ColorPoint));
-        file.read(reinterpret_cast<char*>(indices.data()), indices_count * sizeof(uint32_t));
-
-        return true;
-    }
-
-    return false;
-}
-
 bool load_cave_ply(const std::filesystem::path& path, std::vector<NormalPoint>& points)
 {
     points = {};

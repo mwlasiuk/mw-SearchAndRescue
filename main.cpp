@@ -17,7 +17,6 @@
 #include <cave-traversal-tool/FileIO.h>
 
 #include <cave-traversal-tool/Camera.h>
-#include <cave-traversal-tool/Config.h>
 #include <cave-traversal-tool/Structures.h>
 
 #include <cave-traversal-tool/OpenGL/Buffer.h>
@@ -411,17 +410,6 @@ static inline void load_object()
     }
 }
 
-static inline void load_object_bin()
-{
-    std::string filename;
-
-    if (open_single_file_with_pfd("Open PLY file - BIN", "PLY Files (.bin)", "*.bin", filename))
-    {
-        CHECK_BOOL(load_stretcher_bin(filename, g_stretcher_vertices, g_stretcher_indices));
-        rebuild_stretcher_opengl_data();
-    }
-}
-
 static inline void load_environment()
 {
     std::string filename;
@@ -660,10 +648,7 @@ int main()
                     }
 
                     ImGui::TableSetColumnIndex(2);
-                    if (ImGui::Button("##obj_read_bin", ImVec2(-FLT_MIN, 0)))
-                    {
-                        load_object_bin();
-                    }
+                    ImGui::TextDisabled("-");
 
                     // Environment
                     ImGui::TableNextRow();
