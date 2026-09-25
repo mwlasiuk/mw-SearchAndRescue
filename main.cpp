@@ -134,6 +134,10 @@ static uint32_t g_trajectory_index                     = 0;
 // gizmo
 static bool g_modify_current_pose_with_gizmo = false;
 
+static std::string g_trajectory_path{};
+static std::string g_object_path{};
+static std::string g_environment_path{};
+
 // lock viewport 0 camera target to current trajectory pose
 static bool g_lock_viewport0_target_to_trajectory = false;
 
@@ -398,6 +402,7 @@ static inline void load_trajectory()
     {
         CHECK_BOOL(load_trajectory_csv(filename, g_trajectory_positions, g_trajectory_orientations_mat33, g_load_csv_every_nth));
         rebuild_trajectory_mat33_opengl_data();
+        g_trajectory_path = filename;
     }
 }
 
@@ -409,6 +414,7 @@ static inline void load_object()
     {
         CHECK_BOOL(load_stretcher_ply(filename, g_stretcher_vertices, g_stretcher_indices));
         rebuild_stretcher_opengl_data();
+        g_object_path = filename;
     }
 }
 
@@ -420,6 +426,7 @@ static inline void load_environment()
     {
         CHECK_BOOL(load_cave_laz(filename, g_cave_vertices));
         rebuild_cave_opengl_data();
+        g_environment_path = filename;
     }
 }
 
@@ -766,50 +773,27 @@ int main()
             ImGui::Separator();
             if (ImGui::TreeNode("File input / output"))
             {
-                if (ImGui::BeginTable("IOGrid", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchSame))
+                if (ImGui::Button("Load trajectory", ImVec2(200.0f, 0.0f)))
                 {
-                    ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 120.0f);
-                    ImGui::TableSetupColumn("Read", ImGuiTableColumnFlags_WidthStretch);
-                    ImGui::TableHeadersRow();
-
-                    // Trajectory
-                    ImGui::TableNextRow();
-
-                    ImGui::TableSetColumnIndex(0);
-                    ImGui::Text("Trajectory");
-
-                    ImGui::TableSetColumnIndex(1);
-                    if (ImGui::Button("##traj_read", ImVec2(-FLT_MIN, 0)))
-                    {
-                        load_trajectory();
-                    }
-
-                    // Object
-                    ImGui::TableNextRow();
-
-                    ImGui::TableSetColumnIndex(0);
-                    ImGui::Text("Object");
-
-                    ImGui::TableSetColumnIndex(1);
-                    if (ImGui::Button("##obj_read", ImVec2(-FLT_MIN, 0)))
-                    {
-                        load_object();
-                    }
-
-                    // Environment
-                    ImGui::TableNextRow();
-
-                    ImGui::TableSetColumnIndex(0);
-                    ImGui::Text("Environment");
-
-                    ImGui::TableSetColumnIndex(1);
-                    if (ImGui::Button("##env_read", ImVec2(-FLT_MIN, 0)))
-                    {
-                        load_environment();
-                    }
-
-                    ImGui::EndTable();
+                    load_trajectory();
                 }
+                ImGui::Text("%s", g_trajectory_path.empty() ? "(none)" : g_trajectory_path.c_str());
+
+                ImGui::Separator();
+
+                if (ImGui::Button("Load object", ImVec2(200.0f, 0.0f)))
+                {
+                    load_object();
+                }
+                ImGui::Text("%s", g_object_path.empty() ? "(none)" : g_object_path.c_str());
+
+                ImGui::Separator();
+
+                if (ImGui::Button("Load environment", ImVec2(200.0f, 0.0f)))
+                {
+                    load_environment();
+                }
+                ImGui::Text("%s", g_environment_path.empty() ? "(none)" : g_environment_path.c_str());
 
                 ImGui::TreePop();
             }
