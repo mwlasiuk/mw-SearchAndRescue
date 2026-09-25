@@ -608,9 +608,8 @@ int main()
         const OBB  stretcher_obb               = aabb_to_obb(g_stretcher_aabb, stretcher_pose);
         const auto in_obb_ids_in_obb_proximity = find_buckets_in_obb(g_buckets, stretcher_obb, g_cave_proximity_search);
 
-        if (ImGui::Begin("application"))
+        if (ImGui::Begin("Debug"))
         {
-            ImGui::Separator();
             if (ImGui::TreeNode("Performance"))
             {
                 ImGui::Text("Framerate  : %.3f FPS", ImGui::GetIO().Framerate);
@@ -623,6 +622,64 @@ int main()
             }
 
             ImGui::Separator();
+
+            if (ImGui::TreeNode("File input / output options"))
+            {
+                ImGui::DragFloat("g_cave_load_extent", &g_cave_load_extent, 0.01f, 0.1f, FLT_MAX, "%.3f");
+                ImGui::DragInt("g_cave_load_decimation_factor", &g_cave_load_decimation_factor, 1.0f, 1, INT32_MAX);
+                ImGui::DragInt("g_cave_load_decimation_levels", &g_cave_load_decimation_levels, 1.0f, 1, INT32_MAX);
+                ImGui::DragInt("g_cave_load_minimum_first_level_points", &g_cave_load_minimum_first_level_points, 1.0f, 1, INT32_MAX);
+                ImGui::Checkbox("g_cave_load_use_centered_extents", &g_cave_load_use_centered_extents);
+                ImGui::Checkbox("g_cave_load_set_draw", &g_cave_load_set_draw);
+                ImGui::DragInt("g_load_csv_every_nth", &g_load_csv_every_nth, 1.0f, 1, INT32_MAX);
+                ImGui::TreePop();
+            }
+
+            ImGui::Separator();
+
+            if (ImGui::TreeNode("Clear color"))
+            {
+                ImGui::ColorEdit3("g_clear_color", glm::value_ptr(g_clear_color));
+                ImGui::TreePop();
+            }
+
+            ImGui::Separator();
+
+            if (ImGui::TreeNode("Can draw data?"))
+            {
+                const ImVec4 green(0.2f, 1.0f, 0.2f, 1.0f);
+                const ImVec4 orange(1.0f, 0.6f, 0.0f, 1.0f);
+
+                ImGui::Text("can_draw_trajectory : ");
+                ImGui::SameLine();
+                ImGui::TextColored(can_draw_trajectory ? green : orange, "%c", can_draw_trajectory ? 'Y' : 'N');
+
+                ImGui::Text("can_draw_stretcher : ");
+                ImGui::SameLine();
+                ImGui::TextColored(can_draw_stretcher ? green : orange, "%c", can_draw_stretcher ? 'Y' : 'N');
+
+                ImGui::Text("can_draw_cave : ");
+                ImGui::SameLine();
+                ImGui::TextColored(can_draw_cave ? green : orange, "%c", can_draw_cave ? 'Y' : 'N');
+
+                ImGui::TreePop();
+            }
+
+            ImGui::Separator();
+
+            if (ImGui::TreeNode("OpenGL"))
+            {
+                ImGui::Text("OpenGL version      : %s", (const char*)glGetString(GL_VERSION));
+                ImGui::Text("OpenGL vendor       : %s", (const char*)glGetString(GL_VENDOR));
+                ImGui::Text("OpenGL renderer     : %s", (const char*)glGetString(GL_RENDERER));
+                ImGui::Text("OpenGL GLSL version : %s", (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
+                ImGui::TreePop();
+            }
+        }
+        ImGui::End();
+
+        if (ImGui::Begin("Application"))
+        {
             if (ImGui::TreeNode("Viewport"))
             {
                 int count = static_cast<int>(ctx.active_count);
@@ -758,19 +815,6 @@ int main()
             }
 
             ImGui::Separator();
-            if (ImGui::TreeNode("File input / output options"))
-            {
-                ImGui::DragFloat("g_cave_load_extent", &g_cave_load_extent, 0.01f, 0.1f, FLT_MAX, "%.3f");
-                ImGui::DragInt("g_cave_load_decimation_factor", &g_cave_load_decimation_factor, 1.0f, 1, INT32_MAX);
-                ImGui::DragInt("g_cave_load_decimation_levels", &g_cave_load_decimation_levels, 1.0f, 1, INT32_MAX);
-                ImGui::DragInt("g_cave_load_minimum_first_level_points", &g_cave_load_minimum_first_level_points, 1.0f, 1, INT32_MAX);
-                ImGui::Checkbox("g_cave_load_use_centered_extents", &g_cave_load_use_centered_extents);
-                ImGui::Checkbox("g_cave_load_set_draw", &g_cave_load_set_draw);
-                ImGui::DragInt("g_load_csv_every_nth", &g_load_csv_every_nth, 1.0f, 1, INT32_MAX);
-                ImGui::TreePop();
-            }
-
-            ImGui::Separator();
             if (ImGui::TreeNode("Picking options"))
             {
                 ImGui::Checkbox("g_use_fine_picking", &g_use_fine_picking);
@@ -797,27 +841,6 @@ int main()
             }
 
             ImGui::Separator();
-            if (ImGui::TreeNode("Can draw data?"))
-            {
-                const ImVec4 green(0.2f, 1.0f, 0.2f, 1.0f);
-                const ImVec4 orange(1.0f, 0.6f, 0.0f, 1.0f);
-
-                ImGui::Text("can_draw_trajectory : ");
-                ImGui::SameLine();
-                ImGui::TextColored(can_draw_trajectory ? green : orange, "%c", can_draw_trajectory ? 'Y' : 'N');
-
-                ImGui::Text("can_draw_stretcher : ");
-                ImGui::SameLine();
-                ImGui::TextColored(can_draw_stretcher ? green : orange, "%c", can_draw_stretcher ? 'Y' : 'N');
-
-                ImGui::Text("can_draw_cave : ");
-                ImGui::SameLine();
-                ImGui::TextColored(can_draw_cave ? green : orange, "%c", can_draw_cave ? 'Y' : 'N');
-
-                ImGui::TreePop();
-            }
-
-            ImGui::Separator();
             if (ImGui::TreeNode("Draw enable options"))
             {
                 ImGui::Checkbox("g_draw_origin", &g_draw_origin);
@@ -828,18 +851,6 @@ int main()
                 ImGui::Checkbox("g_draw_point_cloud", &g_draw_point_cloud);
                 ImGui::Checkbox("g_draw_bounding_box", &g_draw_bounding_box);
 
-                ImGui::TreePop();
-            }
-
-            ImGui::Separator();
-            if (ImGui::TreeNode("OpenGL"))
-            {
-                ImGui::Text("OpenGL version      : %s", (const char*)glGetString(GL_VERSION));
-                ImGui::Text("OpenGL vendor       : %s", (const char*)glGetString(GL_VENDOR));
-                ImGui::Text("OpenGL renderer     : %s", (const char*)glGetString(GL_RENDERER));
-                ImGui::Text("OpenGL GLSL version : %s", (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
-
-                ImGui::ColorEdit3("g_clear_color", glm::value_ptr(g_clear_color));
                 ImGui::TreePop();
             }
 
