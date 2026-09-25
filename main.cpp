@@ -39,16 +39,6 @@
 
 #include <portable-file-dialogs.h>
 
-#define CHECK_BOOL(expression)                                    \
-    do                                                            \
-    {                                                             \
-        if (!expression)                                          \
-        {                                                         \
-            spdlog::error("Expression failed : {}", #expression); \
-            std::abort();                                         \
-        }                                                         \
-    } while (0)
-
 static std::vector<PointIntensity> g_cave_vertices{};
 static PointCloudBucket            g_buckets{};
 
@@ -178,9 +168,15 @@ static size_t std_vector_size(const std::vector<T>& vector)
     return vector.size() * sizeof(T);
 }
 
-static void rebuild_trajectory_mat33_opengl_data()
+static bool rebuild_trajectory_mat33_opengl_data()
 {
     const std::vector<VertexBufferAttributeLayout> layout_point = opengl_vertex_array_get_vertex_layout<Point>();
+
+    if (g_trajectory_positions.empty() || g_trajectory_orientations_mat33.empty())
+    {
+        spdlog::error("Refusing to rebuild trajectory OpenGL data : no trajectory points loaded");
+        return false;
+    }
 
     g_trajectory_index = 0;
 
@@ -200,12 +196,20 @@ static void rebuild_trajectory_mat33_opengl_data()
     g_trajectory_positions_vao = new VertexArray(g_trajectory_positions_vbo, false, nullptr, false, layout_point);
 
     spdlog::debug("Created VAO [{}] and VBO [{}]", g_trajectory_positions_vao->GetID(), g_trajectory_positions_vbo->GetID());
+
+    return true;
 }
 
-static void rebuild_stretcher_opengl_data()
+static bool rebuild_stretcher_opengl_data()
 {
     const std::vector<VertexBufferAttributeLayout> layout_color_point = opengl_vertex_array_get_vertex_layout<ColorPoint>();
     const std::vector<VertexBufferAttributeLayout> layout_point       = opengl_vertex_array_get_vertex_layout<Point>();
+
+    if (g_stretcher_vertices.empty() || g_stretcher_indices.empty())
+    {
+        spdlog::error("Refusing to rebuild stretcher OpenGL data : no stretcher data loaded");
+        return false;
+    }
 
     if (g_stretcher_aabb_vao)
     {
@@ -285,12 +289,20 @@ static void rebuild_stretcher_opengl_data()
     g_stretcher_vao = new VertexArray(g_stretcher_vbo, false, g_stretcher_index_buffer, false, layout_color_point);
 
     spdlog::debug("Created VAO [{}], VBO [{}] and IBO [{}]", g_stretcher_vao->GetID(), g_stretcher_vbo->GetID(), g_stretcher_index_buffer->GetID());
+
+    return true;
 }
 
-static void rebuild_cave_opengl_data()
+static bool rebuild_cave_opengl_data()
 {
     const std::vector<VertexBufferAttributeLayout> layout_point_intensity = opengl_vertex_array_get_vertex_layout<PointIntensity>();
     const std::vector<VertexBufferAttributeLayout> layout_point           = opengl_vertex_array_get_vertex_layout<Point>();
+
+    if (g_cave_vertices.empty())
+    {
+        spdlog::error("Refusing to rebuild cave OpenGL data : no cave points loaded");
+        return false;
+    }
 
     // Clear old data
     for (auto& [ID, bucket] : g_buckets)
@@ -392,6 +404,14 @@ static void rebuild_cave_opengl_data()
         bucket.bbox_vbo = new Buffer(GL_NONE, std_vector_size(box_vertices), box_vertices.data());
         bucket.bbox_vao = new VertexArray(bucket.bbox_vbo, false, nullptr, false, layout_point); //
     }
+
+    if (g_buckets.empty())
+    {
+        spdlog::error("Bucketization produced no buckets from {} cave points", g_cave_vertices.size());
+        return false;
+    }
+
+    return true;
 }
 
 static inline void load_trajectory()
@@ -400,8 +420,18 @@ static inline void load_trajectory()
 
     if (open_single_file_with_pfd("Open CSV file", "CSV Files (.csv)", "*.csv", filename))
     {
-        CHECK_BOOL(load_trajectory_csv(filename, g_trajectory_positions, g_trajectory_orientations_mat33, g_load_csv_every_nth));
-        rebuild_trajectory_mat33_opengl_data();
+        if (!load_trajectory_csv(filename, g_trajectory_positions, g_trajectory_orientations_mat33, g_load_csv_every_nth))
+        {
+            spdlog::error("Failed to load trajectory CSV : {}", filename);
+            return;
+        }
+
+        if (!rebuild_trajectory_mat33_opengl_data())
+        {
+            spdlog::error("Failed to rebuild trajectory OpenGL data for : {}", filename);
+            return;
+        }
+
         g_trajectory_path = filename;
     }
 }
@@ -412,8 +442,18 @@ static inline void load_object()
 
     if (open_single_file_with_pfd("Open PLY file", "PLY Files (.ply)", "*.ply", filename))
     {
-        CHECK_BOOL(load_stretcher_ply(filename, g_stretcher_vertices, g_stretcher_indices));
-        rebuild_stretcher_opengl_data();
+        if (!load_stretcher_ply(filename, g_stretcher_vertices, g_stretcher_indices))
+        {
+            spdlog::error("Failed to load stretcher PLY : {}", filename);
+            return;
+        }
+
+        if (!rebuild_stretcher_opengl_data())
+        {
+            spdlog::error("Failed to rebuild stretcher OpenGL data for : {}", filename);
+            return;
+        }
+
         g_object_path = filename;
     }
 }
@@ -424,8 +464,18 @@ static inline void load_environment()
 
     if (open_single_file_with_pfd("Open LAZ file", "LAZ Files (*.laz *.las)", "*.laz *.las", filename))
     {
-        CHECK_BOOL(load_cave_laz(filename, g_cave_vertices));
-        rebuild_cave_opengl_data();
+        if (!load_cave_laz(filename, g_cave_vertices))
+        {
+            spdlog::error("Failed to load environment LAZ : {}", filename);
+            return;
+        }
+
+        if (!rebuild_cave_opengl_data())
+        {
+            spdlog::error("Failed to rebuild cave OpenGL data for : {}", filename);
+            return;
+        }
+
         g_environment_path = filename;
     }
 }
