@@ -22,15 +22,15 @@ Program* make_program(const ProgramShaderSources& sources)
 }
 
 static constexpr const char* const kBoundingBoxStretcherVert = R"(
-#version 460 core
+#version 410 core
 
 layout(location = 0) in vec3 in_Position;
 
-layout(location = 0) uniform mat4 u_MVP   = mat4(1.0f);
-layout(location = 1) uniform vec3 u_Color = vec3(1.0f);
-layout(location = 2) uniform mat4 u_Pose  = mat4(1.0f);
+uniform mat4 u_MVP   = mat4(1.0f);
+uniform vec3 u_Color = vec3(1.0f);
+uniform mat4 u_Pose  = mat4(1.0f);
 
-layout(location = 0) out BLOCK
+out BLOCK
 {
     vec3 color;
 }
@@ -45,11 +45,11 @@ void main()
 )";
 
 static constexpr const char* const kBoundingBoxStretcherFrag = R"(
-#version 460 core
+#version 410 core
 
 layout(location = 0) out vec3 out_Color;
 
-layout(location = 0) in BLOCK
+in BLOCK
 {
     vec3 color;
 } shared_data;
@@ -61,14 +61,14 @@ void main()
 )";
 
 static constexpr const char* const kBoundingBoxVert = R"(
-#version 460 core
+#version 410 core
 
 layout(location = 0) in vec3 in_Position;
 
-layout(location = 0) uniform mat4 u_MVP   = mat4(1.0f);
-layout(location = 1) uniform vec3 u_Color = vec3(1.0f);
+uniform mat4 u_MVP   = mat4(1.0f);
+uniform vec3 u_Color = vec3(1.0f);
 
-layout(location = 0) out BLOCK
+out BLOCK
 {
     vec3 color;
 }
@@ -83,11 +83,11 @@ void main()
 )";
 
 static constexpr const char* const kBoundingBoxFrag = R"(
-#version 460 core
+#version 410 core
 
 layout(location = 0) out vec3 out_Color;
 
-layout(location = 0) in BLOCK
+in BLOCK
 {
     vec3 color;
 } shared_data;
@@ -99,16 +99,16 @@ void main()
 )";
 
 static constexpr const char* const kCameraTargetVert = R"(
-#version 460 core
+#version 410 core
 
 layout(location = 0) in vec3 in_Position;
 
-layout(location = 0) uniform mat4 u_MVP         = mat4(1.0f);
-layout(location = 1) uniform vec3 u_Translation = vec3(0.0f);
-layout(location = 2) uniform float u_Scale      = float(1.0f);
-layout(location = 3) uniform vec3 u_Color       = vec3(1.0f);
+uniform mat4 u_MVP         = mat4(1.0f);
+uniform vec3 u_Translation = vec3(0.0f);
+uniform float u_Scale      = float(1.0f);
+uniform vec3 u_Color       = vec3(1.0f);
 
-layout(location = 0) out BLOCK
+out BLOCK
 {
     vec3 color;
 }
@@ -123,11 +123,11 @@ void main()
 )";
 
 static constexpr const char* const kCameraTargetFrag = R"(
-#version 460 core
+#version 410 core
 
 layout(location = 0) out vec3 out_Color;
 
-layout(location = 0) in BLOCK
+in BLOCK
 {
     vec3 color;
 } shared_data;
@@ -139,15 +139,15 @@ void main()
 )";
 
 static constexpr const char* const kOriginVert = R"(
-#version 460 core
+#version 410 core
 
 layout(location = 0) in vec3 in_Position;
 layout(location = 1) in vec3 in_Color;
 
-layout(location = 0) uniform mat4 u_MVP    = mat4(1.0f);
-layout(location = 1) uniform float u_Scale = float(1.0f);
+uniform mat4 u_MVP    = mat4(1.0f);
+uniform float u_Scale = float(1.0f);
 
-layout(location = 0) out BLOCK
+out BLOCK
 {
     vec3 color;
 }
@@ -162,11 +162,11 @@ void main()
 )";
 
 static constexpr const char* const kOriginFrag = R"(
-#version 460 core
+#version 410 core
 
 layout(location = 0) out vec3 out_Color;
 
-layout(location = 0) in BLOCK
+in BLOCK
 {
     vec3 color;
 } shared_data;
@@ -178,14 +178,14 @@ void main()
 )";
 
 static constexpr const char* const kPointCloudVert = R"(
-#version 460 core
+#version 410 core
 
 layout(location = 0) in vec3 in_Position;
 layout(location = 1) in float in_Intensity;
 
-layout(location = 0) uniform mat4 u_MVP = mat4(1.0f);
+uniform mat4 u_MVP = mat4(1.0f);
 
-layout(location = 0) out BLOCK
+out BLOCK
 {
     vec3 color;
 } shared_data;
@@ -199,11 +199,11 @@ void main()
 )";
 
 static constexpr const char* const kPointCloudFrag = R"(
-#version 460 core
+#version 410 core
 
 layout(location = 0) out vec3 out_Color;
 
-layout(location = 0) in BLOCK
+in BLOCK
 {
     vec3 color;
 } shared_data;
@@ -215,21 +215,21 @@ void main()
 )";
 
 static constexpr const char* const kPointCloudColorMapVert = R"(
-#version 460 core
+#version 410 core
 
 layout(location = 0) in vec3 in_Position;
 layout(location = 1) in float in_Intensity;
 
-layout(location = 0) uniform mat4  u_MVP               = mat4(1.0f);
-layout(location = 1) uniform float u_IntensityMin      = float(0.0f);
-layout(location = 2) uniform float u_IntensityInvRange = float(1.0f);
-layout(location = 3) uniform float u_MultiplyIntensity = float(0.0f);
-layout(location = 4) uniform float u_UsePosition       = float(0.0f);
-layout(location = 5) uniform vec3  u_PositionMin        = vec3(0.0f);
-layout(location = 6) uniform vec3  u_PositionInvRange   = vec3(1.0f);
-layout(location = 7) uniform int   u_ColorMapSelect     = int(0);
+uniform mat4  u_MVP               = mat4(1.0f);
+uniform float u_IntensityMin      = float(0.0f);
+uniform float u_IntensityInvRange = float(1.0f);
+uniform float u_MultiplyIntensity = float(0.0f);
+uniform float u_UsePosition       = float(0.0f);
+uniform vec3  u_PositionMin        = vec3(0.0f);
+uniform vec3  u_PositionInvRange   = vec3(1.0f);
+uniform int   u_ColorMapSelect     = int(0);
 
-layout(location = 0) out BLOCK
+out BLOCK
 {
     vec3 color;
 } shared_data;
@@ -300,8 +300,8 @@ vec3 TurboColormap(float x)
     const vec2 kBlueVec2  = vec2(-89.90310912,  27.34824973);
 
     x = clamp(x, 0.0f, 1.0f);
-    const vec4 v4 = vec4(1.0f, x, x * x, x * x * x);
-    const vec2 v2 = v4.zw * v4.z;
+    vec4 v4 = vec4(1.0f, x, x * x, x * x * x);
+    vec2 v2 = v4.zw * v4.z;
 
     return vec3(
         dot(v4, kRedVec4)   + dot(v2, kRedVec2),
@@ -319,10 +319,10 @@ float PositionHash(vec3 position)
 
 void main()
 {
-    const vec3  position_t  = clamp((in_Position  - u_PositionMin)  * u_PositionInvRange,  0.0f, 1.0f);
-    const float intensity_t = clamp((in_Intensity - u_IntensityMin) * u_IntensityInvRange, 0.0f, 1.0f);
+    vec3  position_t  = clamp((in_Position  - u_PositionMin)  * u_PositionInvRange,  0.0f, 1.0f);
+    float intensity_t = clamp((in_Intensity - u_IntensityMin) * u_IntensityInvRange, 0.0f, 1.0f);
 
-    const float t = (u_UsePosition > 0.0f) ? PositionHash(position_t) : intensity_t;
+    float t = (u_UsePosition > 0.0f) ? PositionHash(position_t) : intensity_t;
 
     // Colormap selected from user settings via u_ColorMapSelect
     vec3 color = vec3(1.0f, 1.0f, 1.0f);
@@ -360,11 +360,11 @@ void main()
 )";
 
 static constexpr const char* const kPointCloudColorMapFrag = R"(
-#version 460 core
+#version 410 core
 
 layout(location = 0) out vec3 out_Color;
 
-layout(location = 0) in BLOCK
+in BLOCK
 {
     vec3 color;
 } shared_data;
@@ -376,15 +376,15 @@ void main()
 )";
 
 static constexpr const char* const kStretcherVert = R"(
-#version 460 core
+#version 410 core
 
 layout(location = 0) in vec3 in_Position;
 layout(location = 1) in vec3 in_Color;
 
-layout(location = 0) uniform mat4 u_MVP  = mat4(1.0f);
-layout(location = 1) uniform mat4 u_Pose = mat4(1.0f);
+uniform mat4 u_MVP  = mat4(1.0f);
+uniform mat4 u_Pose = mat4(1.0f);
 
-layout(location = 0) out BLOCK
+out BLOCK
 {
     vec3 color;
 }
@@ -399,11 +399,11 @@ void main()
 )";
 
 static constexpr const char* const kStretcherFrag = R"(
-#version 460 core
+#version 410 core
 
 layout(location = 0) out vec3 out_Color;
 
-layout(location = 0) in BLOCK
+in BLOCK
 {
     vec3 color;
 } shared_data;
@@ -415,14 +415,14 @@ void main()
 )";
 
 static constexpr const char* const kTrajectoryVert = R"(
-#version 460 core
+#version 410 core
 
 layout(location = 0) in vec3 in_Position;
 
-layout(location = 0) uniform mat4 u_MVP   = mat4(1.0f);
-layout(location = 1) uniform vec3 u_Color = vec3(1.0f);
+uniform mat4 u_MVP   = mat4(1.0f);
+uniform vec3 u_Color = vec3(1.0f);
 
-layout(location = 0) out BLOCK
+out BLOCK
 {
     vec3 color;
 }
@@ -437,11 +437,11 @@ void main()
 )";
 
 static constexpr const char* const kTrajectoryFrag = R"(
-#version 460 core
+#version 410 core
 
 layout(location = 0) out vec3 out_Color;
 
-layout(location = 0) in BLOCK
+in BLOCK
 {
     vec3 color;
 } shared_data;
@@ -516,14 +516,14 @@ ProgramShaderSources GetProgramShaderSources_Stretcher()
 }
 
 static constexpr const char* const kColoredLineVert = R"(
-#version 460 core
+#version 410 core
 
 layout(location = 0) in vec3 in_Position;
 layout(location = 1) in vec3 in_Color;
 
-layout(location = 0) uniform mat4 u_MVP = mat4(1.0f);
+uniform mat4 u_MVP = mat4(1.0f);
 
-layout(location = 0) out BLOCK
+out BLOCK
 {
     vec3 color;
 }
@@ -538,11 +538,11 @@ void main()
 )";
 
 static constexpr const char* const kColoredLineFrag = R"(
-#version 460 core
+#version 410 core
 
 layout(location = 0) out vec3 out_Color;
 
-layout(location = 0) in BLOCK
+in BLOCK
 {
     vec3 color;
 } shared_data;

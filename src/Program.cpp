@@ -7,6 +7,7 @@
 
 #include <glm/gtc/type_ptr.hpp>
 
+#include <stdexcept>
 #include <unordered_map>
 
 struct Program::ProgramIMPL
@@ -44,7 +45,14 @@ Program::Program(const std::vector<ShaderDescriptor>& program_descriptor)
             std::vector<char> info_log(info_log_length);
             glGetShaderInfoLog(shader, info_log_length, &info_log_length, info_log.data());
 
-            spdlog::error("Failed to validate shader compilation: {}", info_log.data());
+            spdlog::error("Failed to validate shader compilation: {}", info_log.empty() ? "No info log" : info_log.data());
+            glDeleteShader(shader);
+            for (const uint32_t compiled_shader : shaders)
+            {
+                glDeleteShader(compiled_shader);
+            }
+            delete _impl;
+            throw std::runtime_error("Shader compilation failed");
         }
 
         shaders.push_back(shader);
@@ -70,7 +78,14 @@ Program::Program(const std::vector<ShaderDescriptor>& program_descriptor)
         std::vector<char> info_log(info_log_length);
         glGetProgramInfoLog(_impl->id, info_log_length, &info_log_length, info_log.data());
 
-        spdlog::error("Failed to validate program linking: {}", info_log.data());
+        spdlog::error("Failed to validate program linking: {}", info_log.empty() ? "No info log" : info_log.data());
+        for (const uint32_t shader : shaders)
+        {
+            glDeleteShader(shader);
+        }
+        glDeleteProgram(_impl->id);
+        delete _impl;
+        throw std::runtime_error("Shader program linking failed");
     }
 
     for (const uint32_t shader : shaders)
@@ -119,11 +134,6 @@ void Program::Bind()
 void Program::Unbind()
 {
     glUseProgram(0);
-}
-
-void Program::PushUniformSamplerUnit(const uint32_t unit, const uint32_t texture)
-{
-    glBindTextureUnit(unit, texture);
 }
 
 void Program::PushUniformS32(const std::string& name, const int32_t value)

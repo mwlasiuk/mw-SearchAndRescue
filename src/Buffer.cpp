@@ -8,25 +8,28 @@
 struct Buffer::BufferIMPL
 {
     uint32_t id    = {};
-    uint32_t flags = {};
+    uint32_t usage = {};
     size_t   size  = {};
 };
 
-Buffer::Buffer(const uint32_t flags, const size_t size, const void* data)
+Buffer::Buffer(const uint32_t usage, const size_t size, const void* data)
 {
     _impl = new BufferIMPL;
 
     _impl->id    = UINT32_MAX;
-    _impl->flags = flags;
+    _impl->usage = usage;
     _impl->size  = size;
 
-    glCreateBuffers(1, &_impl->id);
-    glNamedBufferStorage(_impl->id, _impl->size, data, _impl->flags);
+    int32_t previous_binding = 0;
+    glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &previous_binding);
+    glGenBuffers(1, &_impl->id);
+    glBindBuffer(GL_ARRAY_BUFFER, _impl->id);
+    glBufferData(GL_ARRAY_BUFFER, _impl->size, data, _impl->usage);
+    glBindBuffer(GL_ARRAY_BUFFER, static_cast<uint32_t>(previous_binding));
 }
 
 Buffer::~Buffer()
 {
-    glInvalidateBufferData(_impl->id);
     glDeleteBuffers(1, &_impl->id);
 
     delete _impl;
@@ -37,9 +40,9 @@ uint32_t Buffer::GetID() const
     return _impl->id;
 }
 
-uint32_t Buffer::GetFlags() const
+uint32_t Buffer::GetUsage() const
 {
-    return _impl->flags;
+    return _impl->usage;
 }
 
 size_t Buffer::GetSize() const
@@ -49,9 +52,9 @@ size_t Buffer::GetSize() const
 
 void Buffer::Upload(const void* data, const size_t size, const size_t offset) const
 {
-    if ((_impl->flags & GL_DYNAMIC_STORAGE_BIT) == 0)
+    if (_impl->usage != GL_DYNAMIC_DRAW)
     {
-        spdlog::critical("Buffer ID = {} was created without GL_DYNAMIC_STORAGE_BIT but Upload() was called - upload rejected!", _impl->id);
+        spdlog::critical("Buffer ID = {} was not created for dynamic updates - upload rejected!", _impl->id);
         return;
     }
 
@@ -61,7 +64,11 @@ void Buffer::Upload(const void* data, const size_t size, const size_t offset) co
         return;
     }
 
-    glNamedBufferSubData(_impl->id, offset, size, data);
+    int32_t previous_binding = 0;
+    glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &previous_binding);
+    glBindBuffer(GL_ARRAY_BUFFER, _impl->id);
+    glBufferSubData(GL_ARRAY_BUFFER, offset, size, data);
+    glBindBuffer(GL_ARRAY_BUFFER, static_cast<uint32_t>(previous_binding));
 }
 
 void Buffer::SetAsShaderResource(const uint32_t resource_type, const uint32_t binding, const size_t size, const size_t offset) const

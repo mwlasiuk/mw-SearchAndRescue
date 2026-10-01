@@ -26,27 +26,32 @@ VertexArray::VertexArray(Buffer* vertex_buffer, const bool vertex_buffer_ownersh
     _impl->ibo           = index_buffer;
     _impl->ibo_ownership = index_buffer_ownership;
 
-    glCreateVertexArrays(1, &_impl->id);
+    int32_t previous_vao           = 0;
+    int32_t previous_array_binding = 0;
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &previous_vao);
+    glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &previous_array_binding);
+    glGenVertexArrays(1, &_impl->id);
+    glBindVertexArray(_impl->id);
 
     if (_impl->ibo)
     {
-        glVertexArrayElementBuffer(_impl->id, _impl->ibo->GetID());
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _impl->ibo->GetID());
     }
 
-    if (!_impl->vbo)
+    if (_impl->vbo)
     {
-        return;
+        glBindBuffer(GL_ARRAY_BUFFER, _impl->vbo->GetID());
+        for (const VertexBufferAttributeLayout& attribute_layout : layout)
+        {
+            const auto& [location, components, type, normalize, stride, offset] = attribute_layout;
+
+            glVertexAttribPointer(location, components, type, static_cast<uint8_t>(normalize), stride, reinterpret_cast<const void*>(static_cast<uintptr_t>(offset)));
+            glEnableVertexAttribArray(location);
+        }
     }
 
-    for (const VertexBufferAttributeLayout& attribute_layout : layout)
-    {
-        const auto& [location, components, type, normalize, stride, offset] = attribute_layout;
-
-        glVertexArrayVertexBuffer(_impl->id, location, _impl->vbo->GetID(), offset, stride);
-        glEnableVertexArrayAttrib(_impl->id, location);
-        glVertexArrayAttribFormat(_impl->id, location, components, type, static_cast<uint8_t>(normalize), 0);
-        glVertexArrayAttribBinding(_impl->id, location, location);
-    }
+    glBindBuffer(GL_ARRAY_BUFFER, static_cast<uint32_t>(previous_array_binding));
+    glBindVertexArray(static_cast<uint32_t>(previous_vao));
 }
 
 VertexArray::~VertexArray()
@@ -91,7 +96,7 @@ void VertexArray::DrawArray(const uint32_t mode, const uint32_t first, const uin
     glDrawArrays(mode, first, vertex_count);
 }
 
-void VertexArray::DrawElements(const uint32_t mode, const uint32_t index_count, const uint32_t instance_count, const uint32_t base_instance)
+void VertexArray::DrawElements(const uint32_t mode, const uint32_t index_count)
 {
-    glDrawElementsInstancedBaseVertexBaseInstance(mode, index_count, GL_UNSIGNED_INT, nullptr, instance_count, 0, base_instance);
+    glDrawElements(mode, index_count, GL_UNSIGNED_INT, nullptr);
 }

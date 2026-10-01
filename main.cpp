@@ -2,6 +2,7 @@
 #include <array>
 #include <cctype>
 #include <chrono>
+#include <exception>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -144,17 +145,30 @@ int main()
         {{0.0f, 0.0f, 1.0f}}};
 
     glfwSetErrorCallback(ErrorCallback::GLFW);
-    glfwInit();
+    if (!glfwInit())
+    {
+        spdlog::error("Failed to initialize GLFW");
+        return 1;
+    }
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+#ifdef __APPLE__
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+#endif
 
     glfwWindowHint(GLFW_CONTEXT_NO_ERROR, GLFW_FALSE);
 
     GLFWwindow* window = glfwCreateWindow(800, 600, (std::string(WINDOW_TITLE) + WINDOW_VERSION_STRING).c_str(), nullptr, nullptr);
+    if (!window)
+    {
+        spdlog::error("Failed to create an OpenGL 4.1 core window");
+        glfwTerminate();
+        return 1;
+    }
 
     glfwSetCursorPosCallback(window, cursor_position_callback);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
@@ -179,41 +193,68 @@ int main()
 
     glfwSwapInterval(1);
 
-    gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
-
-    // glEnable(GL_DEBUG_OUTPUT);
-    // glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-    // glDebugMessageCallback(ErrorCallback::OpenGL, nullptr);
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress) || !GLAD_GL_VERSION_4_1)
+    {
+        spdlog::error("OpenGL 4.1 core is required");
+        glfwDestroyWindow(window);
+        glfwTerminate();
+        return 1;
+    }
+    spdlog::info("OpenGL {} | {}", reinterpret_cast<const char*>(glGetString(GL_VERSION)), reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
 
     glEnable(GL_PROGRAM_POINT_SIZE);
     glEnable(GL_DEPTH_TEST);
 
-    Program* origin_program                 = make_program(GetProgramShaderSources_Origin());
-    Program* camera_target_program          = make_program(GetProgramShaderSources_CameraTarger());
-    Program* point_cloud_program            = make_program(GetProgramShaderSources_PointCloud());
-    Program* point_cloud_color_map_program  = make_program(GetProgramShaderSources_PointCloudColorMap());
-    Program* trajectory_program             = make_program(GetProgramShaderSources_Trajectory());
-    Program* stretcher_program              = make_program(GetProgramShaderSources_Stretcher());
-    Program* bounding_box_program           = make_program(GetProgramShaderSources_BoundingBox());
-    Program* bounding_box_stretcher_program = make_program(GetProgramShaderSources_BoundingBoxStretcher());
-    Program* colored_line_program           = make_program(GetProgramShaderSources_ColoredLine());
+    std::array<Program*, 9> programs{};
+    try
+    {
+        programs[0] = make_program(GetProgramShaderSources_Origin());
+        programs[1] = make_program(GetProgramShaderSources_CameraTarger());
+        programs[2] = make_program(GetProgramShaderSources_PointCloud());
+        programs[3] = make_program(GetProgramShaderSources_PointCloudColorMap());
+        programs[4] = make_program(GetProgramShaderSources_Trajectory());
+        programs[5] = make_program(GetProgramShaderSources_Stretcher());
+        programs[6] = make_program(GetProgramShaderSources_BoundingBox());
+        programs[7] = make_program(GetProgramShaderSources_BoundingBoxStretcher());
+        programs[8] = make_program(GetProgramShaderSources_ColoredLine());
+    }
+    catch (const std::exception& error)
+    {
+        spdlog::error("Failed to initialize shaders: {}", error.what());
+        for (Program* program : programs)
+        {
+            delete program;
+        }
+        glfwDestroyWindow(window);
+        glfwTerminate();
+        return 1;
+    }
+    Program* origin_program                 = programs[0];
+    Program* camera_target_program          = programs[1];
+    Program* point_cloud_program            = programs[2];
+    Program* point_cloud_color_map_program  = programs[3];
+    Program* trajectory_program             = programs[4];
+    Program* stretcher_program              = programs[5];
+    Program* bounding_box_program           = programs[6];
+    Program* bounding_box_stretcher_program = programs[7];
+    Program* colored_line_program           = programs[8];
 
     const std::vector<VertexBufferAttributeLayout> layout_color_point = opengl_vertex_array_get_vertex_layout<ColorPoint>();
     const std::vector<VertexBufferAttributeLayout> layout_point       = opengl_vertex_array_get_vertex_layout<Point>();
     const std::vector<VertexBufferAttributeLayout> layout_colored     = opengl_vertex_array_get_vertex_layout<ColoredVertex>();
 
-    Buffer*      origin_buffer = new Buffer(GL_DYNAMIC_STORAGE_BIT, std_vector_size(origin), origin.data());
+    Buffer*      origin_buffer = new Buffer(GL_DYNAMIC_DRAW, std_vector_size(origin), origin.data());
     VertexArray* origin_vao    = new VertexArray(origin_buffer, false, nullptr, false, layout_color_point);
 
-    Buffer*      target_buffer = new Buffer(GL_DYNAMIC_STORAGE_BIT, std_vector_size(target), target.data());
+    Buffer*      target_buffer = new Buffer(GL_DYNAMIC_DRAW, std_vector_size(target), target.data());
     VertexArray* target_vao    = new VertexArray(target_buffer, false, nullptr, false, layout_point);
 
     // Collision points : pre-allocated GPU buffer, filled each frame with positions of first-LOD points inside the stretcher OBB
-    _project_data.collision_points_vbo = new Buffer(GL_DYNAMIC_STORAGE_BIT, ProjectData::COLLISION_POINTS_CAPACITY * sizeof(Point), nullptr);
+    _project_data.collision_points_vbo = new Buffer(GL_DYNAMIC_DRAW, ProjectData::COLLISION_POINTS_CAPACITY * sizeof(Point), nullptr);
     _project_data.collision_points_vao = new VertexArray(_project_data.collision_points_vbo, false, nullptr, false, layout_point);
 
     // Measurement lines : pre-allocated GPU buffer, 2 coloured vertices per completed entry
-    _project_data.measurement_line_vbo = new Buffer(GL_DYNAMIC_STORAGE_BIT, 2 * ProjectData::MEASUREMENT_LINE_CAPACITY * sizeof(ColoredVertex), nullptr);
+    _project_data.measurement_line_vbo = new Buffer(GL_DYNAMIC_DRAW, 2 * ProjectData::MEASUREMENT_LINE_CAPACITY * sizeof(ColoredVertex), nullptr);
     _project_data.measurement_line_vao = new VertexArray(_project_data.measurement_line_vbo, false, nullptr, false, layout_colored);
 
     IMGUI_CHECKVERSION();
@@ -223,8 +264,24 @@ int main()
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     // io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init();
+    const bool glfw_backend_ready = ImGui_ImplGlfw_InitForOpenGL(window, true);
+    const bool gl_backend_ready   = glfw_backend_ready && ImGui_ImplOpenGL3_Init("#version 410 core");
+    if (!gl_backend_ready)
+    {
+        spdlog::error("Failed to initialize ImGui OpenGL backend");
+        if (glfw_backend_ready)
+        {
+            ImGui_ImplGlfw_Shutdown();
+        }
+        ImGui::DestroyContext();
+        for (Program* program : programs)
+        {
+            delete program;
+        }
+        glfwDestroyWindow(window);
+        glfwTerminate();
+        return 1;
+    }
 
     while (!glfwWindowShouldClose(window))
     {
@@ -260,6 +317,14 @@ int main()
         int32_t width  = 0;
         int32_t height = 0;
         glfwGetWindowSize(window, &width, &height);
+        int32_t framebuffer_width  = 0;
+        int32_t framebuffer_height = 0;
+        glfwGetFramebufferSize(window, &framebuffer_width, &framebuffer_height);
+        if (width <= 0 || height <= 0 || framebuffer_width <= 0 || framebuffer_height <= 0)
+        {
+            glfwWaitEvents();
+            continue;
+        }
         ctx.window_width  = width;
         ctx.window_height = height;
 
@@ -270,7 +335,7 @@ int main()
             ctx.cameras[i].viewport_h = static_cast<float>(vp.h);
         }
 
-        glViewport(0, 0, width, height);
+        glViewport(0, 0, framebuffer_width, framebuffer_height);
 
         glClearColor(_user_settings.opengl.clear_color.x, _user_settings.opengl.clear_color.y, _user_settings.opengl.clear_color.z, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -564,7 +629,7 @@ int main()
                 _project_data.trajectory_positions[_project_data.trajectory_index].position             = position;
                 _project_data.trajectory_orientations_mat33[_project_data.trajectory_index].orientation = rotation;
 
-                glNamedBufferSubData(_project_data.trajectory_positions_vbo->GetID(), sizeof(glm::vec3) * _project_data.trajectory_index, sizeof(glm::vec3), &_project_data.trajectory_positions[_project_data.trajectory_index].position);
+                _project_data.trajectory_positions_vbo->Upload(&_project_data.trajectory_positions[_project_data.trajectory_index].position, sizeof(glm::vec3), sizeof(glm::vec3) * _project_data.trajectory_index);
             }
         }
 
@@ -1109,7 +1174,11 @@ int main()
 
         auto draw_scene = [&](const uint32_t viewport_index, const Viewport& vp, Camera& cam)
         {
-            glViewport(vp.x, vp.y, vp.w, vp.h);
+            const int pixel_x = static_cast<int>(static_cast<int64_t>(vp.x) * framebuffer_width / width);
+            const int pixel_y = static_cast<int>(static_cast<int64_t>(vp.y) * framebuffer_height / height);
+            const int pixel_w = static_cast<int>(static_cast<int64_t>(vp.x + vp.w) * framebuffer_width / width) - pixel_x;
+            const int pixel_h = static_cast<int>(static_cast<int64_t>(vp.y + vp.h) * framebuffer_height / height) - pixel_y;
+            glViewport(pixel_x, pixel_y, pixel_w, pixel_h);
 
             glm::mat4 projection = glm::perspectiveFov(glm::radians(cam.fov_y), static_cast<float>(vp.w), static_cast<float>(vp.h), cam.near_plane, cam.far_plane);
             glm::mat4 view       = cam.get_view();
@@ -1209,7 +1278,7 @@ int main()
                 stretcher_program->PushUniform16F32("u_Pose", stretcher_pose);
 
                 _project_data.stretcher_vao->Bind();
-                _project_data.stretcher_vao->DrawElements(GL_TRIANGLES, _project_data.stretcher_indices.size(), 1, 0);
+                _project_data.stretcher_vao->DrawElements(GL_TRIANGLES, _project_data.stretcher_indices.size());
             }
 
             //  STRETCHER BBOX
@@ -1411,6 +1480,10 @@ int main()
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
 
+    for (Program* program : programs)
+    {
+        delete program;
+    }
     glfwDestroyWindow(window);
     glfwTerminate();
 

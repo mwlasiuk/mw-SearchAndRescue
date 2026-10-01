@@ -77,7 +77,7 @@ bool rebuild_trajectory_mat33_opengl_data(ProjectData& project_data)
         delete project_data.trajectory_positions_vbo;
     }
 
-    project_data.trajectory_positions_vbo = new Buffer(GL_DYNAMIC_STORAGE_BIT, std_vector_size(project_data.trajectory_positions), project_data.trajectory_positions.data());
+    project_data.trajectory_positions_vbo = new Buffer(GL_DYNAMIC_DRAW, std_vector_size(project_data.trajectory_positions), project_data.trajectory_positions.data());
     project_data.trajectory_positions_vao = new VertexArray(project_data.trajectory_positions_vbo, false, nullptr, false, layout_point);
 
     spdlog::debug("Created VAO [{}] and VBO [{}]", project_data.trajectory_positions_vao->GetID(), project_data.trajectory_positions_vbo->GetID());
@@ -165,11 +165,11 @@ bool rebuild_stretcher_opengl_data(ProjectData& project_data)
         {{project_data.stretcher_aabb.min.x, project_data.stretcher_aabb.max.y, project_data.stretcher_aabb.min.z}},
         {{project_data.stretcher_aabb.min.x, project_data.stretcher_aabb.max.y, project_data.stretcher_aabb.max.z}}};
 
-    project_data.stretcher_aabb_vbo = new Buffer(GL_NONE, std_vector_size(line_vertices), line_vertices.data());
+    project_data.stretcher_aabb_vbo = new Buffer(GL_STATIC_DRAW, std_vector_size(line_vertices), line_vertices.data());
     project_data.stretcher_aabb_vao = new VertexArray(project_data.stretcher_aabb_vbo, false, nullptr, false, layout_point);
 
-    project_data.stretcher_vbo          = new Buffer(GL_DYNAMIC_STORAGE_BIT, std_vector_size(project_data.stretcher_vertices), project_data.stretcher_vertices.data());
-    project_data.stretcher_index_buffer = new Buffer(GL_DYNAMIC_STORAGE_BIT, std_vector_size(project_data.stretcher_indices), project_data.stretcher_indices.data());
+    project_data.stretcher_vbo          = new Buffer(GL_DYNAMIC_DRAW, std_vector_size(project_data.stretcher_vertices), project_data.stretcher_vertices.data());
+    project_data.stretcher_index_buffer = new Buffer(GL_DYNAMIC_DRAW, std_vector_size(project_data.stretcher_indices), project_data.stretcher_indices.data());
 
     project_data.stretcher_vao = new VertexArray(project_data.stretcher_vbo, false, project_data.stretcher_index_buffer, false, layout_color_point);
 
@@ -265,7 +265,7 @@ bool rebuild_cave_opengl_data(ProjectData& project_data, const UserSettings& use
         {
             if (!current->points.empty())
             {
-                current->vbo = new Buffer(GL_DYNAMIC_STORAGE_BIT, std_vector_size(current->points), current->points.data());
+                current->vbo = new Buffer(GL_DYNAMIC_DRAW, std_vector_size(current->points), current->points.data());
                 current->vao = new VertexArray(current->vbo, false, nullptr, false, layout_point_intensity);
 
                 spdlog::debug("Created LOD [{}] VAO [{}] and VBO [{}] for ID = [{} {} {}]", lod_level, current->vao->GetID(), current->vbo->GetID(), ID.x, ID.y, ID.z);
@@ -306,7 +306,7 @@ bool rebuild_cave_opengl_data(ProjectData& project_data, const UserSettings& use
             {{min.x, max.y, min.z}},
             {{min.x, max.y, max.z}}};
 
-        bucket.bbox_vbo = new Buffer(GL_NONE, std_vector_size(box_vertices), box_vertices.data());
+        bucket.bbox_vbo = new Buffer(GL_STATIC_DRAW, std_vector_size(box_vertices), box_vertices.data());
         bucket.bbox_vao = new VertexArray(bucket.bbox_vbo, false, nullptr, false, layout_point); //
     }
 
